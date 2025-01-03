@@ -18,12 +18,15 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case method == "GET" && path == "/":
 		controller.GetHome(w, r)
+
 	//chat bot inbox
 	case method == "POST" && at.URLParam(path, "/webhook/nomor/:nomorwa"):
 		controller.PostInboxNomor(w, r)
+
 	//masking list nmor official
 	case method == "GET" && path == "/data/phone/all":
 		controller.GetBotList(w, r)
+
 	//akses data helpdesk layanan user
 	case method == "GET" && path == "/data/user/helpdesk/all":
 		controller.GetHelpdeskAll(w, r)
@@ -31,39 +34,51 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetLatestHelpdeskMasuk(w, r)
 	case method == "GET" && path == "/data/user/helpdesk/selesai":
 		controller.GetLatestHelpdeskSelesai(w, r)
+
 	//pamong desa data from api
 	case method == "GET" && path == "/data/lms/user":
 		controller.GetDataUserFromApi(w, r)
+
 	//simpan testimoni dari pamong desa lms api
 	case method == "POST" && path == "/data/lms/testi":
 		controller.PostTestimoni(w, r)
+
 		//get random 4 testi
 	case method == "GET" && path == "/data/lms/random/testi":
 		controller.GetRandomTesti4(w, r)
+
 	//mendapatkan data sent item
 	case method == "GET" && at.URLParam(path, "/data/peserta/sent/:id"):
 		controller.GetSentItem(w, r)
+
 	//simpan feedback unsubs user
 	case method == "POST" && path == "/data/peserta/unsubscribe":
 		controller.PostUnsubscribe(w, r)
+
 	//generate token linked device
 	case method == "PUT" && path == "/data/user":
 		controller.PutTokenDataUser(w, r)
+
 	//Menambhahkan data nomor sender untuk broadcast
 	case method == "PUT" && path == "/data/sender":
 		controller.PutNomorBlast(w, r)
+
 	//mendapatkan data list nomor sender untuk broadcast
 	case method == "GET" && path == "/data/sender":
 		controller.GetDataSenders(w, r)
+
 	//mendapatkan data list nomor sender yang kena blokir dari broadcast
 	case method == "GET" && path == "/data/blokir":
 		controller.GetDataSendersTerblokir(w, r)
+
 	//mendapatkan data rekap pengiriman wa blast
 	case method == "GET" && path == "/data/rekap":
 		controller.GetRekapBlast(w, r)
+
 	//mendapatkan data faq
 	case method == "GET" && at.URLParam(path, "/data/faq/:id"):
 		controller.GetFAQ(w, r)
+
 	//legacy
 	case method == "PUT" && path == "/data/user/task/doing":
 		controller.PutTaskUser(w, r)
@@ -74,19 +89,22 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "GET" && path == "/data/pushrepo/kemarin":
 		controller.GetYesterdayDistincWAGroup(w, r)
 
-	//helpdesk
+	//Helpdesk
 	//mendapatkan data tiket
 	case method == "GET" && at.URLParam(path, "/data/tiket/closed/:id"):
 		controller.GetClosedTicket(w, r)
+
 	//simpan feedback tiket user
 	case method == "POST" && path == "/data/tiket/rate":
 		controller.PostMasukanTiket(w, r)
 		// order
 	case method == "POST" && at.URLParam(path, "/data/order/:namalapak"):
 		controller.HandleOrder(w, r)
+
 	//user data
 	case method == "GET" && path == "/data/user":
 		controller.GetDataUser(w, r)
+
 	//user pendaftaran
 	case method == "POST" && path == "/auth/register/users": //mendapatkan email gmail
 		controller.RegisterGmailAuth(w, r)
@@ -98,6 +116,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.PostDataBioUser(w, r)
 		/* 	case method == "POST" && at.URLParam(path, "/data/user/wa/:nomorwa"):
 		controller.PostDataUserFromWA(w, r) */
+
 	//data proyek
 	case method == "GET" && path == "/data/proyek":
 		controller.GetDataProject(w, r)
@@ -125,6 +144,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.PostDataEditorProject(w, r)
 	case method == "PUT" && path == "/data/proyek/editor": //set approved oleh editor
 		controller.PUtApprovedEditorProject(w, r)
+
 	//upload cover,draft,pdf,sampul buku project
 	case method == "POST" && at.URLParam(path, "/upload/coverbuku/:projectid"):
 		controller.UploadCoverBukuWithParamFileHandler(w, r)
@@ -168,11 +188,21 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.PostTaskList(w, r)
 	case method == "POST" && at.URLParam(path, "/webhook/nomor/:nomorwa"):
 		controller.PostInboxNomor(w, r)
+
 	// LMS
 	case method == "GET" && path == "/lms/refresh/cookie":
 		controller.RefreshLMSCookie(w, r)
 	case method == "GET" && path == "/lms/count/user":
 		controller.GetCountDocUser(w, r)
+
+	//Register
+	case method == "POST" && path == "/data/adminregister":
+	controller.RegisterHandler(w, r)
+
+	//Login
+	case method == "POST" && path == "/data/user":
+	controller.GetUser(w, r)
+
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
 		controller.Auth(w, r)
@@ -182,6 +212,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.VerifyPasswordHandler(w, r)
 	case method == "POST" && path == "/auth/resend":
 		controller.ResendPasswordHandler(w, r)
+
 	// Google Auth
 	default:
 		controller.NotFound(w, r)
