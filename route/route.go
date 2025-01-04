@@ -196,12 +196,16 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetCountDocUser(w, r)
 
 	//Register
-	case method == "POST" && path == "/data/adminregister":
+	case method == "POST" && path == "/data/pengguna/register":
 	controller.RegisterHandler(w, r)
 
 	//Login
-	case method == "POST" && path == "/data/user":
+	case method == "POST" && path == "/data/pengguna/login":
 	controller.GetUser(w, r)
+
+	//Merge PDF
+	case method == "POST" && path == "/pdf/mergepdf":
+		controller.MergePDFController(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
