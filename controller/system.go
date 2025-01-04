@@ -9,6 +9,8 @@ import (
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/model"
 	"go.mongodb.org/mongo-driver/bson"
+	"github.com/gocroot/helper/fpdf"
+	"github.com/pkg/errors"
 )
 
 // RegisterHandler menghandle permintaan registrasi admin.
@@ -63,3 +65,25 @@ func GetUser(respw http.ResponseWriter, req *http.Request) {
 }
 
 // MergePDFM untuk merge 2 PDF
+func MergePDFController(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req model.MergePDF
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	mergedPDF, err := fpdf.MergePDFBytes(req.PDF1, req.PDF2)
+	if err != nil {
+		http.Error(w, errors.Wrap(err, "Failed to merge PDFs").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.WriteHeader(http.StatusOK)
+	w.Write(mergedPDF)
+}
