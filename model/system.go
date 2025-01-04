@@ -18,3 +18,8 @@ type PdfmUser struct {
 	Email    string             `json:"email" bson:"email" validate:"required,email"`
 	Password string             `json:"password" bson:"password" validate:"required,min=8"`
 }
+
+type MergePDF struct {
+	PDF1 []byte `json:"pdf1" binding:"required"`
+	PDF2 []byte `json:"pdf2" binding:"required"`
+}
