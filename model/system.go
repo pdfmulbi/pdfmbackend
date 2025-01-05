@@ -5,7 +5,7 @@ import (
 )
 
 // Untuk Login
-type PdfmAdminRegistration struct {
+type PdfmRegistration struct {
 	ID              primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	Fullname        string             `json:"fullname" bson:"fullname" validate:"required"`
 	Email           string             `json:"email" bson:"email" validate:"required,email"`
