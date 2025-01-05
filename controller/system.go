@@ -2,15 +2,16 @@ package controller
 
 import (
 	"encoding/json"
+	// "io"
+	// "log"
 	"net/http"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/at"
 	"github.com/gocroot/helper/atdb"
+	// "github.com/gocroot/helper/fpdf"
 	"github.com/gocroot/model"
 	"go.mongodb.org/mongo-driver/bson"
-	"github.com/gocroot/helper/fpdf"
-	"github.com/pkg/errors"
 )
 
 // RegisterHandler menghandle permintaan registrasi admin.
@@ -20,7 +21,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var registrationData model.PdfmAdminRegistration
+	var registrationData model.PdfmRegistration
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&registrationData)
@@ -64,26 +65,58 @@ func GetUser(respw http.ResponseWriter, req *http.Request) {
 	at.WriteJSON(respw, http.StatusOK, user)
 }
 
-// MergePDFM untuk merge 2 PDF
-func MergePDFController(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
-		return
-	}
+// MergePDFHandler handles the merging of multiple uploaded PDF files
+// func MergePDFHandler(w http.ResponseWriter, r *http.Request) {
+//     // Parse the multipart form
+//     err := r.ParseMultipartForm(10 << 20) // 10 MB max upload
+//     if err != nil {
+//         http.Error(w, "Failed to parse form", http.StatusBadRequest)
+//         return
+//     }
 
-	var req model.MergePDF
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
+//     // Retrieve uploaded files
+//     files := r.MultipartForm.File["files"]
+//     if len(files) < 2 {
+//         http.Error(w, "Please upload at least 2 PDF files", http.StatusBadRequest)
+//         return
+//     }
 
-	mergedPDF, err := fpdf.MergePDFBytes(req.PDF1, req.PDF2)
-	if err != nil {
-		http.Error(w, errors.Wrap(err, "Failed to merge PDFs").Error(), http.StatusInternalServerError)
-		return
-	}
+//     // Collect file contents
+//     var pdfBytes [][]byte
+//     for _, fileHeader := range files {
+//         file, err := fileHeader.Open()
+//         if err != nil {
+//             http.Error(w, "Failed to open file", http.StatusInternalServerError)
+//             return
+//         }
+//         defer file.Close()
 
-	w.Header().Set("Content-Type", "application/pdf")
-	w.WriteHeader(http.StatusOK)
-	w.Write(mergedPDF)
-}
+//         // Read the file content into memory
+//         fileContent, err := io.ReadAll(file)
+//         if err != nil {
+//             http.Error(w, "Failed to read file", http.StatusInternalServerError)
+//             return
+//         }
+//         pdfBytes = append(pdfBytes, fileContent)
+//     }
+
+//     // Merge PDFs
+//     var mergedPDF []byte
+//     for i := 0; i < len(pdfBytes)-1; i++ {
+//         if i == 0 {
+//             mergedPDF, err = fpdf.MergePDFBytes(pdfBytes[i], pdfBytes[i+1])
+//         } else {
+//             mergedPDF, err = fpdf.MergePDFBytes(mergedPDF, pdfBytes[i+1])
+//         }
+//         if err != nil {
+//             log.Printf("Merge error: %v", err)
+//             http.Error(w, "Failed to merge PDF files", http.StatusInternalServerError)
+//             return
+//         }
+//     }
+
+//     // Serve the merged PDF file
+//     w.Header().Set("Content-Type", "application/pdf")
+//     w.Header().Set("Content-Disposition", `attachment; filename="merged_output.pdf"`)
+//     w.Write(mergedPDF)
+// }
