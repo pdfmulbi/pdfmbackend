@@ -2,6 +2,7 @@ package fpdf
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 
@@ -15,18 +16,18 @@ func MergePDFBytes(pdf1, pdf2 []byte) ([]byte, error) {
 	input1 := bytes.NewReader(pdf1)
 	input2 := bytes.NewReader(pdf2)
 
-	// Create temporary files to save in-memory PDFs (pdfcpu works with file paths)
+	// Create temporary files to save in-memory PDFs
 	tmpFile1, err := os.CreateTemp("", "pdf1_*.pdf")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create temp file for pdf1")
 	}
-	defer os.Remove(tmpFile1.Name()) // Clean up the temporary file
+	defer os.Remove(tmpFile1.Name())
 
 	tmpFile2, err := os.CreateTemp("", "pdf2_*.pdf")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create temp file for pdf2")
 	}
-	defer os.Remove(tmpFile2.Name()) // Clean up the temporary file
+	defer os.Remove(tmpFile2.Name())
 
 	// Write the in-memory bytes to temporary files
 	if _, err := io.Copy(tmpFile1, input1); err != nil {
@@ -44,25 +45,30 @@ func MergePDFBytes(pdf1, pdf2 []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to close temp file for pdf2")
 	}
 
+	// Debugging: Check file sizes
+	info1, _ := os.Stat(tmpFile1.Name())
+	info2, _ := os.Stat(tmpFile2.Name())
+	fmt.Printf("Temp file 1: %s, Size: %d bytes\n", tmpFile1.Name(), info1.Size())
+	fmt.Printf("Temp file 2: %s, Size: %d bytes\n", tmpFile2.Name(), info2.Size())
+
 	// Create another temporary file to store the merged output
 	mergedFile, err := os.CreateTemp("", "merged_*.pdf")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create temp file for merged PDF")
 	}
-	defer os.Remove(mergedFile.Name()) // Clean up the temporary file after reading it
+	defer os.Remove(mergedFile.Name())
 
 	// Prepare the input files for merging
 	inputFiles := []string{tmpFile1.Name(), tmpFile2.Name()}
 
-	// Use the os.Create to ensure w is a valid io.Writer (output file writer)
-	outFile, err := os.Create(mergedFile.Name()) // Create the output file for the merged PDF
+	// Merge the PDFs using output writer
+	outFile, err := os.Create(mergedFile.Name())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create output file for merged PDF")
 	}
-	defer outFile.Close() // Ensure the file is closed after the merge
+	defer outFile.Close()
 
-	// Call the pdfcpu.Merge function to merge the PDFs
-	err = api.Merge(mergedFile.Name(), inputFiles, outFile, nil, false)
+	err = api.Merge(outFile.Name(), inputFiles, nil, nil, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge PDFs")
 	}
