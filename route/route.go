@@ -203,9 +203,19 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "POST" && path == "/data/pengguna/login":
 		controller.GetUser(w, r)
 
-	//Merge PDF Handler
-	// case method == "POST" && path == "/mergepdf":
-	// 	controller.MergePDFHandler(w, r)
+	// Merge PDF Handler
+	case method == "POST" && path == "/pdfm":
+		controller.MergePDFHandler(w, r)
+
+	//CRUD User
+	case method == "POST" && path == "/data/kehadiran":
+		controller.CreateUser(w, r)
+	case method == "GET" && path == "/data/kehadiran":
+		controller.GetUsers(w, r)
+	case method == "PUT" && path == "/data/kehadiran":
+		controller.UpdateUser(w, r)
+	case method == "DELETE" && path == "/data/kehadiran":
+		controller.DeleteUser(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
