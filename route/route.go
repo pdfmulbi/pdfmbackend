@@ -196,25 +196,25 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetCountDocUser(w, r)
 
 	//Register
-	case method == "POST" && path == "/data/pengguna/register":
+	case method == "POST" && path == "/pdfm/register":
 		controller.RegisterHandler(w, r)
 
 	//Login
-	case method == "POST" && path == "/data/pengguna/login":
+	case method == "POST" && path == "/pdfm/login":
 		controller.GetUser(w, r)
 
 	// Merge PDF Handler
-	case method == "POST" && path == "/pdfm":
+	case method == "POST" && path == "/pdfm/mergehandler":
 		controller.MergePDFHandler(w, r)
 
 	//CRUD User
-	case method == "POST" && path == "/data/kehadiran":
+	case method == "POST" && path == "/pdfm/users":
 		controller.CreateUser(w, r)
-	case method == "GET" && path == "/data/kehadiran":
+	case method == "GET" && path == "/pdfm/users":
 		controller.GetUsers(w, r)
-	case method == "PUT" && path == "/data/kehadiran":
+	case method == "PUT" && path == "/pdfm/users":
 		controller.UpdateUser(w, r)
-	case method == "DELETE" && path == "/data/kehadiran":
+	case method == "DELETE" && path == "/pdfm/users":
 		controller.DeleteUser(w, r)
 
 	// Google Auth

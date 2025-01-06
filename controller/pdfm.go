@@ -53,9 +53,9 @@ func GetUser(respw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var user model.User
+	var user model.PdfmUsers
 	filter := bson.M{"email": loginDetails.Email, "password": loginDetails.Password}
-	user, err := atdb.GetOneDoc[model.User](config.Mongoconn, "users", filter)
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
 		helper.WriteJSON(respw, http.StatusUnauthorized, "Email atau password salah")
 		return
