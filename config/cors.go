@@ -9,7 +9,7 @@ var Origins = []string{
 	"https://www.bukupedia.co.id",
 	"https://naskah.bukupedia.co.id",
 	"https://bukupedia.co.id",
-	"https://pdfmulbi.github.io/pdfm.github.io",
+	"https://pdfmulbi.github.io/pdfm-frontend/",
 }
 
 // Fungsi untuk memeriksa apakah origin diizinkan
@@ -40,6 +40,7 @@ func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 		// Set CORS headers for the main request.
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "POST,GET,PUT,DELETE")
 		return false
 	}
 
