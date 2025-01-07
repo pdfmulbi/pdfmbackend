@@ -27,7 +27,7 @@ jobs:
       - name: 'Deploy a gen 2 cloud function'
         run: |
           gcloud functions deploy pdfmulbi \
-            --region=asia-southeast1 \
+            --region=asia-southeast2 \
             --allow-unauthenticated \
             --entry-point=WebHook \
             --gen2 \
@@ -36,8 +36,8 @@ jobs:
             --timeout=540s \
             --set-env-vars MONGOSTRING='${{ secrets.MONGOSTRING }}',PHONENUMBER='${{ secrets.PHONENUMBER }}'
       - name: 'Cek eksistensi fungsi'
-        run: 'gcloud functions describe pdfmulbi --region=asia-southeast1'
+        run: 'gcloud functions describe pdfmulbi --region=asia-southeast2'
       - name: 'Cek log debugging'
-        run: 'gcloud functions logs read pdfmulbi --region=asia-southeast1'
+        run: 'gcloud functions logs read pdfmulbi --region=asia-southeast2'
       - name: 'Cleaning Artifact Registry'
-        run: 'gcloud artifacts repositories delete gcf-artifacts --location=asia-southeast1 --quiet'
+        run: 'gcloud artifacts repositories delete gcf-artifacts --location=asia-southeast2 --quiet'
