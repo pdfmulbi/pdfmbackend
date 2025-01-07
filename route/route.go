@@ -204,7 +204,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetUser(w, r)
 
 	// Merge PDF Handler
-	case method == "POST" && path == "/pdfm/mergehandler":
+	case method == "POST" && path == "/pdfm/merge":
 		controller.MergePDFHandler(w, r)
 
 	//CRUD 
@@ -212,7 +212,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetUsers(w, r)
 	case method == "POST" && path == "/pdfm/users":
 		controller.CreateUser(w, r)
-	case method == "GET" && path == "/pdfm/users/id":
+	case method == "GET" && path == "/pdfm/users/details":
 		controller.GetOneUser(w, r)
 	case method == "PUT" && path == "/pdfm/users":
 		controller.UpdateUser(w, r)
