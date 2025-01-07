@@ -23,8 +23,6 @@ type PdfmUsers struct {
 	IsPremium     bool               `bson:"isPremium" json:"isPremium"`
 	LastMergeTime time.Time          `bson:"lastMergeTime" json:"lastMergeTime"`
 	MergeCount    int                `bson:"mergeCount" json:"mergeCount"`
-	GoogleID      string             `bson:"googleId" json:"googleId,omitempty"`
-	ProfilePic    string             `bson:"profilePic" json:"profilePic"`
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
