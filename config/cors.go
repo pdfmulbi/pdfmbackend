@@ -31,7 +31,7 @@ func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Login")
-			w.Header().Set("Access-Control-Allow-Methods", "POST,GET,DELETE,PUT,OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "POST,GET,DELETE,PUT")
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Max-Age", "3600")
 			w.WriteHeader(http.StatusNoContent)
@@ -40,11 +40,11 @@ func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 		// Set CORS headers for the main request.
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "POST,GET,PUT,DELETE,OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "POST,GET,PUT,DELETE")
 		return false
 	}
 
-	// Log if the origin is not allowed
-	http.Error(w, "CORS origin not allowed", http.StatusForbidden)
+	// // Log if the origin is not allowed
+	// http.Error(w, "CORS origin not allowed", http.StatusForbidden)
 	return false
 }
