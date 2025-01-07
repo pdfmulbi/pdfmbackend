@@ -9,7 +9,7 @@ var Origins = []string{
 	"https://www.bukupedia.co.id",
 	"https://naskah.bukupedia.co.id",
 	"https://bukupedia.co.id",
-	"https://pdfmulbi.github.io/pdfm-frontend",
+	"https://pdfmulbi.github.io/pdfm-frontend/",
 }
 
 // Fungsi untuk memeriksa apakah origin diizinkan
