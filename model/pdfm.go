@@ -7,13 +7,13 @@ import (
 )
 
 // Untuk Register
-type PdfmRegistration struct {
-	ID              primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	Name          	string             `bson:"name" json:"name"`
-	Email           string             `json:"email" bson:"email" validate:"required,email"`
-	Password        string             `json:"password" bson:"password" validate:"required,min=8"`
-	ConfirmPassword string             `json:"confirm_password" bson:"confirm_password" validate:"required,eqfield=Password"`
-}
+// type PdfmRegistration struct {
+// 	ID              primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+// 	Name          	string             `bson:"name" json:"name"`
+// 	Email           string             `json:"email" bson:"email" validate:"required,email"`
+// 	Password        string             `json:"password" bson:"password" validate:"required,min=8"`
+// 	ConfirmPassword string             `json:"confirm_password" bson:"confirm_password" validate:"required,eqfield=Password"`
+// }
 
 type PdfmUsers struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`

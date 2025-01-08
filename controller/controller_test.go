@@ -26,16 +26,37 @@ func executeRequest(t *testing.T, handler http.HandlerFunc, method, url string, 
 
 // Test RegisterHandler
 func TestRegisterHandler(t *testing.T) {
-	data := model.PdfmRegistration{
-		Email:           "test@example.com",
-		Password:        "password123",
-		ConfirmPassword: "password123",
+	// Data registrasi yang sesuai dengan validasi
+	data := model.PdfmUsers{
+		Name:     "Test User",
+		Email:    "test@example.com",
+		Password: "password123",
 	}
-	body, _ := json.Marshal(data)
 
+	// Konversi data ke JSON
+	body, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("Gagal meng-encode JSON: %v", err)
+	}
+
+	// Jalankan permintaan dengan fungsi helper
 	rr := executeRequest(t, controller.RegisterHandler, http.MethodPost, "/pdfm/register", body)
+
+	// Periksa status respons
 	if rr.Code != http.StatusOK {
-		t.Errorf("expected status OK, got %v", rr.Code)
+		t.Errorf("Expected status OK, got %v", rr.Code)
+	}
+
+	// Periksa isi respons
+	var response map[string]string
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Fatalf("Gagal decode respons JSON: %v", err)
+	}
+
+	// Validasi isi respons
+	if response["message"] != "Registrasi berhasil" {
+		t.Errorf("Expected message 'Registrasi berhasil', got '%s'", response["message"])
 	}
 }
 
