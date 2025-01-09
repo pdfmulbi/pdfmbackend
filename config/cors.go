@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"net/http"
+	"strings"
 )
 
 // Daftar origins yang diizinkan
@@ -15,10 +16,16 @@ var Origins = []string{
 	"http://localhost:5500",
 }
 
+// Fungsi untuk menormalisasi origin (menghapus trailing slash jika ada)
+func normalizeOrigin(origin string) string {
+	return strings.TrimRight(origin, "/")
+}
+
 // Fungsi untuk memeriksa apakah origin diizinkan
 func isAllowedOrigin(origin string) bool {
+	normalizedOrigin := normalizeOrigin(origin)
 	for _, o := range Origins {
-		if o == origin {
+		if o == normalizedOrigin {
 			return true
 		}
 	}
@@ -28,12 +35,16 @@ func isAllowedOrigin(origin string) bool {
 // Fungsi untuk mengatur header CORS
 func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 	origin := r.Header.Get("Origin")
+	normalizedOrigin := normalizeOrigin(origin)
 
 	// Log origin untuk debugging
 	log.Printf("Incoming request from Origin: %s", origin)
 
-	if isAllowedOrigin(origin) {
-		// Tangani preflight request
+	if isAllowedOrigin(normalizedOrigin) {
+		// Tambahkan header Vary untuk cache
+		w.Header().Set("Vary", "Origin")
+
+		// Tangani preflight request (OPTIONS)
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
@@ -53,7 +64,7 @@ func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 	}
 
 	// Log jika origin tidak diizinkan
-	log.Println("CORS origin not allowed:", origin)
-	http.Error(w, "CORS origin not allowed: "+origin, http.StatusForbidden)
+	// log.Println("CORS origin not allowed:", origin)
+	// http.Error(w, "CORS origin not allowed: "+origin, http.StatusForbidden)
 	return false
 }
