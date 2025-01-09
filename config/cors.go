@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -10,9 +11,8 @@ var Origins = []string{
 	"https://naskah.bukupedia.co.id",
 	"https://bukupedia.co.id",
 	"https://pdfmulbi.github.io/pdfm-frontend/",
-	"https://pdfmulbi.github.io/pdfm-frontend/user-dashboard.html",
-	"http://127.0.0.1:5500", // Untuk pengujian lokal
-	"http://localhost:5500", // Untuk pengujian lokal
+	"http://127.0.0.1:5500",
+	"http://localhost:5500",
 }
 
 // Fungsi untuk memeriksa apakah origin diizinkan
@@ -28,6 +28,9 @@ func isAllowedOrigin(origin string) bool {
 // Fungsi untuk mengatur header CORS
 func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 	origin := r.Header.Get("Origin")
+
+	// Log origin untuk debugging
+	log.Printf("Incoming request from Origin: %s", origin)
 
 	if isAllowedOrigin(origin) {
 		// Tangani preflight request
@@ -50,6 +53,7 @@ func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
 	}
 
 	// Log jika origin tidak diizinkan
+	log.Println("CORS origin not allowed:", origin)
 	http.Error(w, "CORS origin not allowed: "+origin, http.StatusForbidden)
 	return false
 }
