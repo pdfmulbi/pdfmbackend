@@ -97,25 +97,24 @@ func GetUsers(respw http.ResponseWriter, req *http.Request) {
 
 // Get User By ID
 func GetOneUser(respw http.ResponseWriter, req *http.Request) {
-	id := req.URL.Query().Get("id")
-	if id == "" {
-		helper.WriteJSON(respw, http.StatusBadRequest, "Missing user ID")
+	// Ambil parameter "name" dari query string
+	name := req.URL.Query().Get("name")
+	if name == "" {
+		helper.WriteJSON(respw, http.StatusBadRequest, "Missing user name")
 		return
 	}
 
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
+	// Buat filter untuk mencari berdasarkan nama
+	filter := bson.M{"name": name}
 
-	filter := bson.M{"_id": objID}
+	// Cari user berdasarkan filter
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
 		helper.WriteJSON(respw, http.StatusNotFound, "User not found")
 		return
 	}
 
+	// Kirim data user sebagai respons
 	helper.WriteJSON(respw, http.StatusOK, user)
 }
 
