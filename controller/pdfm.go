@@ -156,7 +156,7 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 		Name      string `json:"name"`
 		Email     string `json:"email"`
 		Password  string `json:"password"`
-		IsSupport bool   `json:"isSupport"` // Status pembayaran
+		IsSupport bool   `json:"isSupport"`
 	}
 
 	// Decode JSON body
@@ -173,14 +173,14 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Check if isSupport (paid status) is true
-	if !updateUser.IsSupport {
-		helper.WriteJSON(respw, http.StatusForbidden, "User is not a supporter. Update not allowed.")
-		return
-	}
+	// if !updateUser.IsSupport {
+	// 	helper.WriteJSON(respw, http.StatusForbidden, "User is not a supporter. Update not allowed.")
+	// 	return
+	// }
 
-	// Create filter and update fields
+	// Create filter and pipeline
 	filter := bson.M{"_id": objectID}
-	update := bson.M{
+	pipeline := bson.M{
 		"$set": bson.M{
 			"name":      updateUser.Name,
 			"email":     updateUser.Email,
@@ -190,8 +190,8 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	// Perform update operation
-	result, err := atdb.UpdateOneDoc(config.Mongoconn, "users", filter, update)
+	// Perform update operation using pipeline
+	result, err := atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, []bson.M{pipeline})
 	if err != nil {
 		helper.WriteJSON(respw, http.StatusInternalServerError, "Failed to update user: "+err.Error())
 		return
