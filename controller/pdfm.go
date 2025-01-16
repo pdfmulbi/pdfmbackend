@@ -234,83 +234,83 @@ func DeleteUser(respw http.ResponseWriter, req *http.Request) {
 	helper.WriteJSON(respw, http.StatusOK, "User deleted successfully")
 }
 
-// MergePDFHandler checks user status and enforces limits for non-premium users
-func MergePDFHandler(w http.ResponseWriter, r *http.Request) {
-	// Get user ID from query parameters
-	userID := r.URL.Query().Get("user_id")
-	if userID == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
-		return
-	}
+// // MergePDFHandler checks user status and enforces limits for non-premium users
+// func MergePDFHandler(w http.ResponseWriter, r *http.Request) {
+// 	// Get user ID from query parameters
+// 	userID := r.URL.Query().Get("user_id")
+// 	if userID == "" {
+// 		http.Error(w, "User ID is required", http.StatusBadRequest)
+// 		return
+// 	}
 
-	// Convert userID to ObjectID
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		http.Error(w, "Invalid User ID", http.StatusBadRequest)
-		return
-	}
+// 	// Convert userID to ObjectID
+// 	objID, err := primitive.ObjectIDFromHex(userID)
+// 	if err != nil {
+// 		http.Error(w, "Invalid User ID", http.StatusBadRequest)
+// 		return
+// 	}
 
-	// Fetch user data from database
-	filter := bson.M{"_id": objID}
-	result, err := atdb.GetOneDocPdfm(config.Mongoconn, "users", filter)
-	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
-	}
+// 	// Fetch user data from database
+// 	filter := bson.M{"_id": objID}
+// 	result, err := atdb.GetOneDocPdfm(config.Mongoconn, "users", filter)
+// 	if err != nil {
+// 		http.Error(w, "User not found", http.StatusNotFound)
+// 		return
+// 	}
 
-	var user model.PdfmUsers
-	err = result.Decode(&user)
-	if err != nil {
-		http.Error(w, "Failed to decode user data", http.StatusInternalServerError)
-		return
-	}
+// 	var user model.PdfmUsers
+// 	err = result.Decode(&user)
+// 	if err != nil {
+// 		http.Error(w, "Failed to decode user data", http.StatusInternalServerError)
+// 		return
+// 	}
 
-	// Parse the number of PDFs from the request
-	files := r.MultipartForm.File["pdfs"]
-	if len(files) == 0 {
-		http.Error(w, "No PDF files uploaded", http.StatusBadRequest)
-		return
-	}
+// 	// Parse the number of PDFs from the request
+// 	files := r.MultipartForm.File["pdfs"]
+// 	if len(files) == 0 {
+// 		http.Error(w, "No PDF files uploaded", http.StatusBadRequest)
+// 		return
+// 	}
 
-	// Check user status and enforce PDF count limit
-	if !user.IsSupport && len(files) > 3 {
-		http.Error(w, "Non-premium users can merge up to 3 PDFs only", http.StatusForbidden)
-		return
-	}
+// 	// Check user status and enforce PDF count limit
+// 	if !user.IsSupport && len(files) > 3 {
+// 		http.Error(w, "Non-premium users can merge up to 3 PDFs only", http.StatusForbidden)
+// 		return
+// 	}
 
-	// Allow premium users to merge without restriction
-	if user.IsSupport {
-		// Premium user logic (e.g., log activity if needed)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Premium user: PDF merge allowed"))
-		return
-	}
+// 	// Allow premium users to merge without restriction
+// 	if user.IsSupport {
+// 		// Premium user logic (e.g., log activity if needed)
+// 		w.WriteHeader(http.StatusOK)
+// 		w.Write([]byte("Premium user: PDF merge allowed"))
+// 		return
+// 	}
 
-	// Non-premium user limit checks
-	now := time.Now()
-	if user.LastMergeTime.Add(2 * time.Hour).After(now) {
-		http.Error(w, "Non-premium users can only merge PDFs every 2 hours", http.StatusTooManyRequests)
-		return
-	}
+// 	// Non-premium user limit checks
+// 	now := time.Now()
+// 	if user.LastMergeTime.Add(2 * time.Hour).After(now) {
+// 		http.Error(w, "Non-premium users can only merge PDFs every 2 hours", http.StatusTooManyRequests)
+// 		return
+// 	}
 
-	// Update user merge info for non-premium users
-	user.LastMergeTime = now
-	user.MergeCount++
+// 	// Update user merge info for non-premium users
+// 	user.LastMergeTime = now
+// 	user.MergeCount++
 
-	// Update user data in the database
-	update := bson.M{
-		"$set": bson.M{
-			"lastMergeTime": user.LastMergeTime,
-			"mergeCount":    user.MergeCount,
-		},
-	}
-	_, err = atdb.UpdateOneDoc(config.Mongoconn, "users", filter, update)
-	if err != nil {
-		http.Error(w, "Failed to update user data", http.StatusInternalServerError)
-		return
-	}
+// 	// Update user data in the database
+// 	update := bson.M{
+// 		"$set": bson.M{
+// 			"lastMergeTime": user.LastMergeTime,
+// 			"mergeCount":    user.MergeCount,
+// 		},
+// 	}
+// 	_, err = atdb.UpdateOneDoc(config.Mongoconn, "users", filter, update)
+// 	if err != nil {
+// 		http.Error(w, "Failed to update user data", http.StatusInternalServerError)
+// 		return
+// 	}
 
-	// Proceed with merging PDFs (implementation not shown)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("PDF merge successful"))
-}
+// 	// Proceed with merging PDFs (implementation not shown)
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte("PDF merge successful"))
+// }

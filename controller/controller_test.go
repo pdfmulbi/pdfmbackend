@@ -67,15 +67,15 @@ func TestGetUser(t *testing.T) {
 	}
 }
 
-// Test MergePDFHandler
-func TestMergePDFHandler(t *testing.T) {
-	url := "/pdfm/merge?user_id=" + primitive.NewObjectID().Hex()
-	rr := executeRequest(t, controller.MergePDFHandler, http.MethodPost, url, nil)
+// // Test MergePDFHandler
+// func TestMergePDFHandler(t *testing.T) {
+// 	url := "/pdfm/merge?user_id=" + primitive.NewObjectID().Hex()
+// 	rr := executeRequest(t, controller.MergePDFHandler, http.MethodPost, url, nil)
 
-	if rr.Code != http.StatusOK && rr.Code != http.StatusForbidden {
-		t.Errorf("Expected status OK or Forbidden, got %v", rr.Code)
-	}
-}
+// 	if rr.Code != http.StatusOK && rr.Code != http.StatusForbidden {
+// 		t.Errorf("Expected status OK or Forbidden, got %v", rr.Code)
+// 	}
+// }
 
 // Test GetUsers
 func TestGetUsers(t *testing.T) {
