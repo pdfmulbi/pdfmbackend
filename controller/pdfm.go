@@ -102,7 +102,7 @@ func GetOneUser(respw http.ResponseWriter, req *http.Request) {
     if id != "" {
         objectID, err := primitive.ObjectIDFromHex(id)
         if err != nil {
-            helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format")
+            helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format (GetOneUser)")
             return
         }
         filter = bson.M{"_id": objectID}
@@ -174,7 +174,7 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 	// Convert ID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(updateUser.ID)
 	if err != nil {
-		helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format")
+		helper.WriteJSON(respw, http.StatusBadRequest, " format")
 		return
 	}
 
@@ -212,6 +212,7 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 	helper.WriteJSON(respw, http.StatusOK, "User updated successfully")
 }
 
+//Delete User
 func DeleteUser(respw http.ResponseWriter, req *http.Request) {
     var user struct {
         ID string `json:"id"`
@@ -232,7 +233,7 @@ func DeleteUser(respw http.ResponseWriter, req *http.Request) {
     // Convert ID to ObjectID
     objectID, err := primitive.ObjectIDFromHex(user.ID)
     if err != nil {
-        helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format")
+        helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format (Delete)")
         return
     }
 

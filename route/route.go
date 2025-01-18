@@ -208,15 +208,15 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	// 	controller.MergePDFHandler(w, r)
 
 	//CRUD 
-	case method == "GET" && path == "/pdfm/users":
+	case method == "GET" && path == "/pdfm/get/users":
 		controller.GetUsers(w, r)
-	case method == "POST" && path == "/pdfm/users":
+	case method == "POST" && path == "/pdfm/create/users":
 		controller.CreateUser(w, r)
-	case method == "GET" && path == "/pdfm/users/details":
+	case method == "GET" && path == "/pdfm/getone/users/":
 		controller.GetOneUser(w, r)
-	case method == "PUT" && path == "/pdfm/users":
+	case method == "PUT" && path == "/pdfm/update/users":
 		controller.UpdateUser(w, r)
-	case method == "DELETE" && path == "/pdfm/users":
+	case method == "DELETE" && path == "/pdfm/delete/users":
 		controller.DeleteUser(w, r)
 
 	// Google Auth
