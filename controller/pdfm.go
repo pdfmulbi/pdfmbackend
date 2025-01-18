@@ -212,30 +212,42 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 	helper.WriteJSON(respw, http.StatusOK, "User updated successfully")
 }
 
-// Delete User
 func DeleteUser(respw http.ResponseWriter, req *http.Request) {
-	var user struct {
-		ID string `json:"id"`
-	}
+    var user struct {
+        ID string `json:"id"`
+    }
 
-	// Decode JSON body to temporary struct
-	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
-		helper.WriteJSON(respw, http.StatusBadRequest, err.Error())
-		return
-	}
+    // Decode JSON body
+    if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
+        helper.WriteJSON(respw, http.StatusBadRequest, "Invalid request body")
+        return
+    }
 
-	// Convert ID from string to primitive.ObjectID
-	objectID, err := primitive.ObjectIDFromHex(user.ID)
-	if err != nil {
-		helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format")
-		return
-	}
+    // Validate ID
+    if user.ID == "" {
+        helper.WriteJSON(respw, http.StatusBadRequest, "User ID is required")
+        return
+    }
 
-	// Delete document by ObjectID
-	if _, err := atdb.DeleteOneDoc(config.Mongoconn, "users", bson.M{"_id": objectID}); err != nil {
-		helper.WriteJSON(respw, http.StatusInternalServerError, err.Error())
-		return
-	}
+    // Convert ID to ObjectID
+    objectID, err := primitive.ObjectIDFromHex(user.ID)
+    if err != nil {
+        helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format")
+        return
+    }
 
-	helper.WriteJSON(respw, http.StatusOK, "User deleted successfully")
+    // Delete document by ObjectID
+    result, err := atdb.DeleteOneDoc(config.Mongoconn, "users", bson.M{"_id": objectID})
+    if err != nil {
+        helper.WriteJSON(respw, http.StatusInternalServerError, "Failed to delete user: "+err.Error())
+        return
+    }
+
+    // Check if user was deleted
+    if result.DeletedCount == 0 {
+        helper.WriteJSON(respw, http.StatusNotFound, "User not found")
+        return
+    }
+
+    helper.WriteJSON(respw, http.StatusOK, "User deleted successfully")
 }
