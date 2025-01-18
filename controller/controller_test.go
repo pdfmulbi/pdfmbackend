@@ -69,7 +69,7 @@ func TestGetUser(t *testing.T) {
 
 // Test GetUsers
 func TestGetUsers(t *testing.T) {
-	rr := executeRequest(t, controller.GetUsers, http.MethodGet, "/pdfm/users", nil)
+	rr := executeRequest(t, controller.GetUsers, http.MethodGet, "/pdfm/get/users", nil)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status OK, got %v", rr.Code)
@@ -78,7 +78,7 @@ func TestGetUsers(t *testing.T) {
 
 // Test GetOneUser
 func TestGetOneUser(t *testing.T) {
-	url := "/pdfm/users/details?name=Test+User"
+	url := "/pdfm/getone/users?name=Test+User"
 	rr := executeRequest(t, controller.GetOneUser, http.MethodGet, url, nil)
 
 	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
@@ -90,11 +90,11 @@ func TestGetOneUser(t *testing.T) {
 func TestCreateUser(t *testing.T) {
 	data := model.PdfmUsers{
 		Email: "newuser@example.com",
-		Name:  "New User",
+		Name:  "New User_Lah",
 	}
 	body, _ := json.Marshal(data)
 
-	rr := executeRequest(t, controller.CreateUser, http.MethodPost, "/pdfm/users", body)
+	rr := executeRequest(t, controller.CreateUser, http.MethodPost, "/pdfm/create/users", body)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status OK, got %v", rr.Code)
@@ -103,21 +103,21 @@ func TestCreateUser(t *testing.T) {
 
 // Test UpdateUser
 func TestUpdateUser(t *testing.T) {
-    existingID := "6788b3e5b1e4cb696abc705c" // Ganti dengan ID valid di database
-    data := map[string]interface{}{
-        "id":        existingID,
-        "name":      "Updated Name",
-        "email":     "updated@example.com",
-        "password":  "newpassword123",
-        "isSupport": true,
-    }
-    body, _ := json.Marshal(data)
+	existingID := "678be27e03a8b7bbb3ee3077" // Ganti dengan ID valid di database
+	data := map[string]interface{}{
+		"id":        existingID,
+		"name":      "Updated Name",
+		"email":     "updated@example.com",
+		"password":  "newpassword123",
+		"isSupport": true,
+	}
+	body, _ := json.Marshal(data)
 
-    rr := executeRequest(t, controller.UpdateUser, http.MethodPut, "/pdfm/users", body)
+	rr := executeRequest(t, controller.UpdateUser, http.MethodPut, "/pdfm/update/users", body)
 
-    if rr.Code != http.StatusOK {
-        t.Errorf("Expected status OK, got %v. Response: %s", rr.Code, rr.Body.String())
-    }
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status OK, got %v. Response: %s", rr.Code, rr.Body.String())
+	}
 }
 
 // Test DeleteUser
@@ -127,7 +127,7 @@ func TestDeleteUser(t *testing.T) {
 	}
 	body, _ := json.Marshal(data)
 
-	rr := executeRequest(t, controller.DeleteUser, http.MethodDelete, "/pdfm/users", body)
+	rr := executeRequest(t, controller.DeleteUser, http.MethodDelete, "/pdfm/delete/users", body)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status OK, got %v", rr.Code)
