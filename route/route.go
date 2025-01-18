@@ -195,6 +195,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "GET" && path == "/lms/count/user":
 		controller.GetCountDocUser(w, r)
 
+	//PDFM
 	//Register
 	case method == "POST" && path == "/pdfm/register":
 		controller.RegisterHandler(w, r)
@@ -203,16 +204,12 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "POST" && path == "/pdfm/login":
 		controller.GetUser(w, r)
 
-	// Merge PDF Handler
-	// case method == "POST" && path == "/pdfm/merge":
-	// 	controller.MergePDFHandler(w, r)
-
 	//CRUD 
 	case method == "GET" && path == "/pdfm/get/users":
 		controller.GetUsers(w, r)
 	case method == "POST" && path == "/pdfm/create/users":
 		controller.CreateUser(w, r)
-	case method == "GET" && path == "/pdfm/getone/users/":
+	case method == "GET" && path == "/pdfm/getone/users":
 		controller.GetOneUser(w, r)
 	case method == "PUT" && path == "/pdfm/update/users":
 		controller.UpdateUser(w, r)
