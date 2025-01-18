@@ -95,27 +95,33 @@ func GetUsers(respw http.ResponseWriter, req *http.Request) {
 	helper.WriteJSON(respw, http.StatusOK, users)
 }
 
-// Get User By ID
+// Get User By ID or Name
 func GetOneUser(respw http.ResponseWriter, req *http.Request) {
-	// Ambil parameter "name" dari query string
-	name := req.URL.Query().Get("name")
-	if name == "" {
-		helper.WriteJSON(respw, http.StatusBadRequest, "Missing user name")
-		return
-	}
+    id := req.URL.Query().Get("id")
+    var filter bson.M
+    if id != "" {
+        objectID, err := primitive.ObjectIDFromHex(id)
+        if err != nil {
+            helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format")
+            return
+        }
+        filter = bson.M{"_id": objectID}
+    } else {
+        name := req.URL.Query().Get("name")
+        if name == "" {
+            helper.WriteJSON(respw, http.StatusBadRequest, "Missing user identifier")
+            return
+        }
+        filter = bson.M{"name": name}
+    }
 
-	// Buat filter untuk mencari berdasarkan nama
-	filter := bson.M{"name": name}
+    user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
+    if err != nil {
+        helper.WriteJSON(respw, http.StatusNotFound, "User not found")
+        return
+    }
 
-	// Cari user berdasarkan filter
-	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
-	if err != nil {
-		helper.WriteJSON(respw, http.StatusNotFound, "User not found")
-		return
-	}
-
-	// Kirim data user sebagai respons
-	helper.WriteJSON(respw, http.StatusOK, user)
+    helper.WriteJSON(respw, http.StatusOK, user)
 }
 
 // Create User
