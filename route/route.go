@@ -204,6 +204,10 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "POST" && path == "/pdfm/login":
 		controller.GetUser(w, r)
 
+	//PaymentHandler
+	case method == "POST" && path == "/pdfm/payment":
+		controller.ConfirmPaymentHandler(w, r)
+
 	//CRUD 
 	case method == "GET" && path == "/pdfm/get/users":
 		controller.GetUsers(w, r)
