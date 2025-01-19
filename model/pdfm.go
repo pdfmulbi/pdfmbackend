@@ -27,3 +27,9 @@ type Invoice struct {
 	PaymentMethod string             `bson:"paymentMethod" json:"paymentMethod"` // e.g., "QRIS"
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
 }
+
+type Token struct {
+	Token     string    `bson:"token"`     // Token unik
+	Email     string    `bson:"email"`     // Email pengguna
+	ExpiresAt time.Time `bson:"expiresAt"` // Waktu kedaluwarsa
+}
