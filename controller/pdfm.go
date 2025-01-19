@@ -312,3 +312,21 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
         "message": "Payment confirmed, user updated, and invoice created successfully",
     })
 }
+
+func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Ambil semua invoice dari koleksi `invoices`
+	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{})
+    if err != nil {
+        http.Error(w, "Failed to fetch invoices: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Kirim data invoice dalam format JSON
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(invoices)
+}
