@@ -199,19 +199,21 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	//Register
 	case method == "POST" && path == "/pdfm/register":
 		controller.RegisterHandler(w, r)
-
 	//Login
 	case method == "POST" && path == "/pdfm/login":
 		controller.GetUser(w, r)
+	//Logout
+	case method == "POST" && path == "/pdfm/logout":
+		controller.LogoutHandler(w, r)
 
 	//PaymentHandler
 	case method == "POST" && path == "/pdfm/payment":
 		controller.ConfirmPaymentHandler(w, r)
-	
+
 	//Get InvoiceHandler
 	case method == "GET" && path == "/pdfm/invoices":
 		controller.GetInvoicesHandler(w, r)
-	
+
 	//CRUD 
 	case method == "GET" && path == "/pdfm/get/users":
 		controller.GetUsers(w, r)
@@ -223,6 +225,15 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.UpdateUser(w, r)
 	case method == "DELETE" && path == "/pdfm/delete/users":
 		controller.DeleteUser(w, r)
+
+	// Endpoint Terproteksi
+	case method == "GET" && path == "/pdfm/protected":
+		handler := controller.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			email := r.Header.Get("X-User-Email") // Ambil email dari middleware
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"message": "Hello, ` + email + `"}`))
+		}))
+		handler.ServeHTTP(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
