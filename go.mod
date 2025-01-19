@@ -9,6 +9,7 @@ require (
 	github.com/aiteung/atdb v0.1.7
 	github.com/go-playground/webhooks v5.17.0+incompatible
 	github.com/google/go-github/v59 v59.0.0
+	github.com/google/uuid v1.6.0
 	github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5
 	github.com/kimseokgis/backend-ai v0.0.0-20240731161356-5480aad28fd3
 	github.com/pdfcpu/pdfcpu v0.9.1
@@ -39,7 +40,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
