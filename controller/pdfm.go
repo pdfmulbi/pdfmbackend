@@ -244,3 +244,71 @@ func DeleteUser(respw http.ResponseWriter, req *http.Request) {
 
 	helper.WriteJSON(respw, http.StatusOK, "User deleted successfully")
 }
+
+// ConfirmPaymentHandler handles the payment confirmation and updates user status.
+func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    var paymentData struct {
+        Name   string `json:"name"`   // Nama pengguna
+        Amount int    `json:"amount"` // Nominal pembayaran
+    }
+
+    if err := json.NewDecoder(r.Body).Decode(&paymentData); err != nil {
+        http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    // Filter untuk mencari pengguna berdasarkan nama
+    filter := bson.M{"name": paymentData.Name}
+
+    // Pastikan pengguna ada
+    var user model.PdfmUsers
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
+    if err != nil {
+        http.Error(w, "User not found: "+err.Error(), http.StatusNotFound)
+        return
+    }
+
+    // Gunakan pipeline untuk memperbarui pengguna
+    pipeline := []bson.M{
+        {"$set": bson.M{
+            "isSupport": true,
+            "updatedAt": time.Now(),
+        }},
+    }
+
+    // Panggil fungsi pipeline dari package `atdb`
+	_, err = atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, pipeline)
+    if err != nil {
+        http.Error(w, "Failed to update user: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Buat invoice baru
+    invoice := model.Invoice{
+        ID:            primitive.NewObjectID(),
+        Name:          user.Name,
+        Amount:        paymentData.Amount,
+        Status:        "Paid",
+        Details:       "Support Payment",
+        PaymentMethod: "QRIS",
+        CreatedAt:     time.Now(),
+    }
+
+    // Simpan invoice ke koleksi `invoices`
+	_, err = atdb.InsertOneDoc(config.Mongoconn, "invoices", invoice)
+    if err != nil {
+        http.Error(w, "Failed to create invoice: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Kirim respon sukses
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Payment confirmed, user updated, and invoice created successfully",
+    })
+}
