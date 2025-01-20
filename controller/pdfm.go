@@ -70,12 +70,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //Login
-// Penyimpanan sementara untuk token aktif
-var activeTokens = map[string]string{} // key: token, value: email
-
 // GetUser menangani login dan menghasilkan token sederhana
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	// Periksa metode HTTP
 	if r.Method != http.MethodPost {
 		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
 		return
@@ -115,13 +111,6 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simpan token di map (activeTokens) dengan asosiasi ke email pengguna
-	activeTokens[token] = user.Email
-
-	// Tambahkan log untuk debugging
-	fmt.Printf("Active Tokens: %+v\n", activeTokens)
-
-	// Kirim token ke frontend
 	response := map[string]string{
 		"token":   token,
 		"message": "Login berhasil",
@@ -133,11 +122,18 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 
 // Logout
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("Authorization")
-	if token == "" {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
 		http.Error(w, "Token tidak ditemukan", http.StatusBadRequest)
 		return
 	}
+
+	const bearerPrefix = "Bearer "
+	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+		http.Error(w, "Format token tidak valid", http.StatusUnauthorized)
+		return
+	}
+	token := authHeader[len(bearerPrefix):]
 
 	// Hapus token dari database
 	_, err := atdb.DeleteOneDoc(config.Mongoconn, "tokens", bson.M{"token": token})
@@ -146,46 +142,36 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Token yang dihapus:", token)
-	fmt.Printf("Token aktif setelah logout: %+v\n", activeTokens)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"message": "Logout berhasil"}`))
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Ambil token dari header Authorization
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			http.Error(w, "Token tidak ditemukan", http.StatusUnauthorized)
 			return
 		}
 
-		// Pastikan format header Authorization menggunakan "Bearer <token>"
 		const bearerPrefix = "Bearer "
 		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
 			http.Error(w, "Format token tidak valid", http.StatusUnauthorized)
 			return
 		}
-
-		// Potong prefix "Bearer " untuk mendapatkan token sebenarnya
 		token := authHeader[len(bearerPrefix):]
 
-		// Tambahkan log untuk debugging
-		fmt.Println("Token diterima:", token)
-		fmt.Printf("Token aktif di backend: %+v\n", activeTokens)
-
-		// Validasi token
-		email, exists := activeTokens[token]
-		if !exists {
-			fmt.Printf("Token aktif: %+v\n", activeTokens) // Debugging activeTokens
+		// Validasi token di database
+		var tokenData model.Token
+		tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+		if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
 			http.Error(w, "Token tidak valid atau kedaluwarsa", http.StatusUnauthorized)
 			return
 		}
 
-		// Simpan email pengguna dalam header (opsional)
-		r.Header.Set("X-User-Email", email)
+		// Simpan email pengguna dalam context (opsional)
+		r.Header.Set("X-User-Email", tokenData.Email)
 
-		// Lanjutkan ke handler berikutnya
 		next.ServeHTTP(w, r)
 	})
 }
