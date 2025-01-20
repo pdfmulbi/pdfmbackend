@@ -72,52 +72,54 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 //Login
 // GetUser menangani login dan menghasilkan token sederhana
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPost {
+        http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
+        return
+    }
 
-	// Decode data login dari request body
-	var loginDetails model.PdfmUsers
-	if err := json.NewDecoder(r.Body).Decode(&loginDetails); err != nil {
-		http.Error(w, "Data tidak valid: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+    // Decode data login dari request body
+    var loginDetails model.PdfmUsers
+    if err := json.NewDecoder(r.Body).Decode(&loginDetails); err != nil {
+        http.Error(w, "Data tidak valid: "+err.Error(), http.StatusBadRequest)
+        return
+    }
 
-	// Cari pengguna di database berdasarkan email dan password
-	filter := bson.M{"email": loginDetails.Email, "password": loginDetails.Password}
-	var user model.PdfmUsers
-	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
-	if err != nil {
-		http.Error(w, "Email atau password salah", http.StatusUnauthorized)
-		return
-	}
+    // Cari pengguna di database berdasarkan email dan password
+    filter := bson.M{"email": loginDetails.Email, "password": loginDetails.Password}
+    var user model.PdfmUsers
+    user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
+    if err != nil {
+        http.Error(w, "Email atau password salah", http.StatusUnauthorized)
+        return
+    }
 
-	// Buat token unik
-	token := uuid.New().String()
+    // Buat token unik
+    token := uuid.New().String()
 
-	// Tentukan waktu kedaluwarsa (misalnya 24 jam)
-	expiresAt := time.Now().Add(24 * time.Hour)
+    // Tentukan waktu kedaluwarsa (misalnya 24 jam)
+    expiresAt := time.Now().Add(24 * time.Hour)
 
-	// Simpan token ke database
-	tokenData := model.Token{
-		Token:     token,
-		Email:     user.Email,
-		ExpiresAt: expiresAt,
-	}
-	_, err = atdb.InsertOneDoc(config.Mongoconn, "tokens", tokenData)
-	if err != nil {
-		http.Error(w, "Gagal menyimpan token", http.StatusInternalServerError)
-		return
-	}
+    // Simpan token ke database
+    tokenData := model.Token{
+        Token:     token,
+        Email:     user.Email,
+        ExpiresAt: expiresAt,
+    }
+    _, err = atdb.InsertOneDoc(config.Mongoconn, "tokens", tokenData)
+    if err != nil {
+        http.Error(w, "Gagal menyimpan token", http.StatusInternalServerError)
+        return
+    }
 
-	response := map[string]string{
-		"token":   token,
-		"message": "Login berhasil",
-	}
+    // Tambahkan userName (dari field Name) ke respons
+    response := map[string]string{
+        "token":    token,
+        "userName": user.Name, // Ambil nama pengguna dari field `Name`
+        "message":  "Login berhasil",
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
 }
 
 // Logout
@@ -147,33 +149,42 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Token tidak ditemukan", http.StatusUnauthorized)
-			return
-		}
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        authHeader := r.Header.Get("Authorization")
+        if authHeader == "" {
+            http.Error(w, "Token tidak ditemukan", http.StatusUnauthorized)
+            return
+        }
 
-		const bearerPrefix = "Bearer "
-		if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-			http.Error(w, "Format token tidak valid", http.StatusUnauthorized)
-			return
-		}
-		token := authHeader[len(bearerPrefix):]
+        const bearerPrefix = "Bearer "
+        if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+            http.Error(w, "Format token tidak valid", http.StatusUnauthorized)
+            return
+        }
+        token := authHeader[len(bearerPrefix):]
 
-		// Validasi token di database
-		var tokenData model.Token
-		tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
-		if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
-			http.Error(w, "Token tidak valid atau kedaluwarsa", http.StatusUnauthorized)
-			return
-		}
+        // Validasi token di database
+        var tokenData model.Token
+        tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+        if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
+            http.Error(w, "Token tidak valid atau kedaluwarsa", http.StatusUnauthorized)
+            return
+        }
 
-		// Simpan email pengguna dalam context (opsional)
-		r.Header.Set("X-User-Email", tokenData.Email)
+        // Cari userName berdasarkan email di koleksi `PdfmUsers`
+        var user model.PdfmUsers
+        user, err = atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
+        if err != nil {
+            http.Error(w, "Pengguna tidak ditemukan", http.StatusUnauthorized)
+            return
+        }
 
-		next.ServeHTTP(w, r)
-	})
+        // Simpan email dan userName pengguna dalam context/header (opsional)
+        r.Header.Set("X-User-Email", tokenData.Email)
+        r.Header.Set("X-User-Name", user.Name)
+
+        next.ServeHTTP(w, r)
+    })
 }
 
 //CRUD
