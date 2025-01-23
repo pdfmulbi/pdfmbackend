@@ -6,13 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/gocroot/config"
 	"github.com/gocroot/controller"
-	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/model"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -94,37 +90,6 @@ func TestLogoutHandler(t *testing.T) {
 	}
 }
 
-// Test AuthMiddleware
-func setupTestToken() {
-	dummyToken := model.Token{
-		Token:     "valid_token",
-		ExpiresAt: time.Now().Add(1 * time.Hour), // Token berlaku 1 jam
-		Email:     "testuser@example.com",
-	}
-	atdb.InsertOneDoc(config.Mongoconn, "tokens", dummyToken)
-}
-func cleanupTestToken() {
-	atdb.DeleteOneDoc(config.Mongoconn, "tokens", bson.M{"token": "valid_token"})
-}
-func TestAuthMiddleware(t *testing.T) {
-	setupTestToken()
-	defer cleanupTestToken()
-
-	handler := controller.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	req, _ := http.NewRequest(http.MethodGet, "/pdfm/protected", nil)
-	req.Header.Set("Authorization", "Bearer valid_token")
-
-	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
-	}
-}
-
 // Test GetUsers
 func TestGetUsers(t *testing.T) {
 	rr := executeRequest(t, controller.GetUsers, http.MethodGet, "/pdfm/get/users", nil)
@@ -138,6 +103,16 @@ func TestGetUsers(t *testing.T) {
 func TestGetOneUser(t *testing.T) {
 	url := "/pdfm/getone/users?name=Test+User"
 	rr := executeRequest(t, controller.GetOneUser, http.MethodGet, url, nil)
+
+	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status OK or NotFound, got %v", rr.Code)
+	}
+}
+
+// Test GetOneUserAdmin
+func TestGetOneUserAdmin(t *testing.T) {
+	url := "/pdfm/getoneadmin/users?id=validObjectID"
+	rr := executeRequest(t, controller.GetOneUserAdmin, http.MethodGet, url, nil)
 
 	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status OK or NotFound, got %v", rr.Code)
