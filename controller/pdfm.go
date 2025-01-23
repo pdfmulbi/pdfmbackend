@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -197,7 +198,40 @@ func GetUsers(respw http.ResponseWriter, req *http.Request) {
 	helper.WriteJSON(respw, http.StatusOK, users)
 }
 
-// Get User By ID or Name
+// Get User By ID or Name for  Admin Dahsboard
+func GetOneUserAdmin(respw http.ResponseWriter, req *http.Request) {
+	id := req.URL.Query().Get("id")
+	var filter bson.M
+	if id != "" {
+		objectID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			helper.WriteJSON(respw, http.StatusBadRequest, "Invalid user ID format (GetOneUser)")
+			return
+		}
+		filter = bson.M{"_id": objectID}
+	} else {
+		name := req.URL.Query().Get("name")
+		if name == "" {
+			helper.WriteJSON(respw, http.StatusBadRequest, "Missing user identifier")
+			return
+		}
+		// Use case-insensitive regex for name matching
+		filter = bson.M{"name": bson.M{"$regex": name, "$options": "i"}}
+	}
+
+	fmt.Printf("Filter: %+v\n", filter) // Log filter for debugging
+
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err) // Log error for debugging
+		helper.WriteJSON(respw, http.StatusNotFound, "User not found")
+		return
+	}
+
+	helper.WriteJSON(respw, http.StatusOK, user)
+}
+
+// Get User Token
 func GetOneUser(respw http.ResponseWriter, req *http.Request) {
 	// Ambil token dari header Authorization
 	authHeader := req.Header.Get("Authorization")
@@ -281,20 +315,26 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Convert ID to ObjectID
-	objectID, err := primitive.ObjectIDFromHex(updateUser.ID)
-	if err != nil {
-		helper.WriteJSON(respw, http.StatusBadRequest, " format")
+	// Validasi ID
+	if updateUser.ID == "" {
+		helper.WriteJSON(respw, http.StatusBadRequest, "User ID is required")
 		return
 	}
 
-	// Check if isSupport (paid status) is true
-	// if !updateUser.IsSupport {
-	// 	helper.WriteJSON(respw, http.StatusForbidden, "User is not a supporter. Update not allowed.")
-	// 	return
-	// }
+	// Convert ID to ObjectID
+	objectID, err := primitive.ObjectIDFromHex(updateUser.ID)
+	if err != nil {
+		helper.WriteJSON(respw, http.StatusBadRequest, "Invalid ID format")
+		return
+	}
 
-	// Create filter and pipeline
+	// Validasi data lainnya
+	if updateUser.Name == "" || updateUser.Email == "" {
+		helper.WriteJSON(respw, http.StatusBadRequest, "Name and Email cannot be empty")
+		return
+	}
+
+	// Buat filter dan pipeline update
 	filter := bson.M{"_id": objectID}
 	pipeline := bson.M{
 		"$set": bson.M{
@@ -306,14 +346,14 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	// Perform update operation using pipeline
+	// Perform update operation
 	result, err := atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, []bson.M{pipeline})
 	if err != nil {
 		helper.WriteJSON(respw, http.StatusInternalServerError, "Failed to update user: "+err.Error())
 		return
 	}
 
-	// Check if any document was updated
+	// Periksa apakah ada dokumen yang diperbarui
 	if result.MatchedCount == 0 {
 		helper.WriteJSON(respw, http.StatusNotFound, "User not found")
 		return

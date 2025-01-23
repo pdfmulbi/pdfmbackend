@@ -221,6 +221,8 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.CreateUser(w, r)
 	case method == "GET" && path == "/pdfm/getone/users":
 		controller.GetOneUser(w, r)
+	case method == "GET" && path == "/pdfm/getoneadmin/users":
+		controller.GetOneUserAdmin(w, r)
 	case method == "PUT" && path == "/pdfm/update/users":
 		controller.UpdateUser(w, r)
 	case method == "DELETE" && path == "/pdfm/delete/users":
