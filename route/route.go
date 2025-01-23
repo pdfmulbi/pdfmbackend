@@ -228,15 +228,6 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "DELETE" && path == "/pdfm/delete/users":
 		controller.DeleteUser(w, r)
 
-	// Endpoint Terproteksi
-	case method == "GET" && path == "/pdfm/protected":
-		handler := controller.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			email := r.Header.Get("X-User-Email") // Ambil email dari middleware
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"message": "Hello, ` + email + `"}`))
-		}))
-		handler.ServeHTTP(w, r)
-
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
 		controller.Auth(w, r)
