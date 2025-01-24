@@ -111,7 +111,7 @@ func TestGetOneUser(t *testing.T) {
 
 // Test GetOneUserAdmin
 func TestGetOneUserAdmin(t *testing.T) {
-	url := "/pdfm/getoneadmin/users?id=validObjectID"
+	url := "/pdfm/getoneadmin/users?id=678baf981b52a5a0c34d16be"
 	rr := executeRequest(t, controller.GetOneUserAdmin, http.MethodGet, url, nil)
 
 	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
