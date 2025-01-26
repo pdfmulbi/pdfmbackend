@@ -387,22 +387,22 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Periksa apakah pengguna sudah menjadi supporter
-	if user.IsSupport {
-		http.Error(w, "User is already a supporter", http.StatusBadRequest)
-		return
-	}
+	// // Periksa apakah pengguna sudah menjadi supporter
+	// if user.IsSupport {
+	// 	http.Error(w, "User is already a supporter", http.StatusBadRequest)
+	// 	return
+	// }
 
-	// Periksa duplikasi invoice
-	_, err = atdb.GetOneDoc[model.Invoice](config.Mongoconn, "invoices", bson.M{
-		"name":   paymentData.Name,
-		"amount": paymentData.Amount,
-		"status": "Paid",
-	})
-	if err == nil {
-		http.Error(w, "Invoice already exists for this payment", http.StatusBadRequest)
-		return
-	}
+	// // Periksa duplikasi invoice
+	// _, err = atdb.GetOneDoc[model.Invoice](config.Mongoconn, "invoices", bson.M{
+	// 	"name":   paymentData.Name,
+	// 	"amount": paymentData.Amount,
+	// 	"status": "Paid",
+	// })
+	// if err == nil {
+	// 	http.Error(w, "Invoice already exists for this payment", http.StatusBadRequest)
+	// 	return
+	// }
 
 	// Gunakan pipeline untuk memperbarui pengguna
 	pipeline := []bson.M{
