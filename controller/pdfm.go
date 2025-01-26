@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -368,6 +369,12 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validasi jumlah donasi minimum
+	if paymentData.Amount < 10000 {
+		http.Error(w, "Minimal donasi adalah Rp10.000", http.StatusBadRequest)
+		return
+	}
+
 	// Filter untuk mencari pengguna berdasarkan nama
 	filter := bson.M{"name": paymentData.Name}
 
@@ -375,7 +382,25 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	var user model.PdfmUsers
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
+		log.Printf("Error finding user: %v", err)
 		http.Error(w, "User not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Periksa apakah pengguna sudah menjadi supporter
+	if user.IsSupport {
+		http.Error(w, "User is already a supporter", http.StatusBadRequest)
+		return
+	}
+
+	// Periksa duplikasi invoice
+	_, err = atdb.GetOneDoc[model.Invoice](config.Mongoconn, "invoices", bson.M{
+		"name":   paymentData.Name,
+		"amount": paymentData.Amount,
+		"status": "Paid",
+	})
+	if err == nil {
+		http.Error(w, "Invoice already exists for this payment", http.StatusBadRequest)
 		return
 	}
 
@@ -387,9 +412,10 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		}},
 	}
 
-	// Panggil fungsi pipeline dari package `atdb`
+	// Perbarui pengguna
 	_, err = atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, pipeline)
 	if err != nil {
+		log.Printf("Error updating user: %v", err)
 		http.Error(w, "Failed to update user: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -408,14 +434,18 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	// Simpan invoice ke koleksi `invoices`
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "invoices", invoice)
 	if err != nil {
+		log.Printf("Error creating invoice: %v", err)
 		http.Error(w, "Failed to create invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Kirim respon sukses
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Payment confirmed, user updated, and invoice created successfully",
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":     "Payment confirmed, user updated, and invoice created successfully",
+		"invoiceId":   invoice.ID,
+		"invoiceDate": invoice.CreatedAt,
+		"amountPaid":  invoice.Amount,
 	})
 }
 
@@ -428,7 +458,7 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 	// Ambil semua invoice dari koleksi `invoices`
 	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{})
 	if err != nil {
-		http.Error(w, "Failed to fetch invoices: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Oops! We couldn't fetch the invoices. Please contact support if the issue persists.", http.StatusInternalServerError)
 		return
 	}
 
