@@ -51,6 +51,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set nilai default untuk field lainnya
 	registrationData.ID = primitive.NewObjectID()
+	registrationData.IsAdmin = false
 	registrationData.IsSupport = false
 	registrationData.LastMergeTime = time.Time{} // Nilai default
 	registrationData.MergeCount = 0
@@ -397,7 +398,7 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	// _, err = atdb.GetOneDoc[model.Invoice](config.Mongoconn, "invoices", bson.M{
 	// 	"name":   paymentData.Name,
 	// 	"amount": paymentData.Amount,
-	// 	"status": "Paid",
+	// 	"status": "Paid",  
 	// })
 	// if err == nil {
 	// 	http.Error(w, "Invoice already exists for this payment", http.StatusBadRequest)
