@@ -13,8 +13,6 @@ type PdfmUsers struct {
 	Password      string             `bson:"password" json:"password"`
 	IsAdmin       bool               `bson:"isAdmin" json:"isAdmin"`
 	IsSupport     bool               `bson:"isSupport" json:"isSupport"`
-	LastMergeTime time.Time          `bson:"lastMergeTime" json:"lastMergeTime"`
-	MergeCount    int                `bson:"mergeCount" json:"mergeCount"`
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 }

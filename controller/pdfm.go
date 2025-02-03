@@ -53,8 +53,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	registrationData.ID = primitive.NewObjectID()
 	registrationData.IsAdmin = false
 	registrationData.IsSupport = false
-	registrationData.LastMergeTime = time.Time{} // Nilai default
-	registrationData.MergeCount = 0
 	registrationData.CreatedAt = time.Now()
 	registrationData.UpdatedAt = time.Now()
 
