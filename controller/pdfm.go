@@ -113,10 +113,10 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Tambahkan userName (dari field Name) ke respons
-	response := map[string]string{
+	response := map[string]interface{}{
 		"token":    token,
-		"userName": user.Name, // Ambil nama pengguna dari field `Name`
+		"userName": user.Name,
+		"isAdmin":  user.IsAdmin,
 		"message":  "Login berhasil",
 	}
 
