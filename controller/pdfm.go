@@ -369,8 +369,8 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validasi jumlah donasi minimum
-	if paymentData.Amount < 10000 {
-		http.Error(w, "Minimal donasi adalah Rp10.000", http.StatusBadRequest)
+	if paymentData.Amount < 1 {
+		http.Error(w, "Minimal donasi adalah Rp1", http.StatusBadRequest)
 		return
 	}
 
