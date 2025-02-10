@@ -441,7 +441,7 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	// Kirim respon sukses
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":     "Payment confirmed, user updated, and invoice created successfully",
+		"message":     "Pembayaran telah dilakukan, terima kasih!",
 		"invoiceId":   invoice.ID,
 		"invoiceDate": invoice.CreatedAt,
 		"amountPaid":  invoice.Amount,
