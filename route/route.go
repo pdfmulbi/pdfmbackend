@@ -214,7 +214,7 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "GET" && path == "/pdfm/invoices":
 		controller.GetInvoicesHandler(w, r)
 
-	//CRUD 
+	//CRUD
 	case method == "GET" && path == "/pdfm/get/users":
 		controller.GetUsers(w, r)
 	case method == "POST" && path == "/pdfm/create/users":
@@ -227,6 +227,16 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.UpdateUser(w, r)
 	case method == "DELETE" && path == "/pdfm/delete/users":
 		controller.DeleteUser(w, r)
+
+	//Notifications
+	case method == "GET" && path == "/pdfm/notifications":
+		controller.GetNotifications(w, r)
+	case method == "POST" && path == "/pdfm/notifications":
+		controller.AddNotification(w, r)
+	case method == "PUT" && path == "/pdfm/notifications/read":
+		controller.MarkAllAsRead(w, r)
+	case method == "DELETE" && path == "/pdfm/notifications":
+		controller.ClearNotifications(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
