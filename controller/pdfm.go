@@ -396,7 +396,7 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	// _, err = atdb.GetOneDoc[model.Invoice](config.Mongoconn, "invoices", bson.M{
 	// 	"name":   paymentData.Name,
 	// 	"amount": paymentData.Amount,
-	// 	"status": "Paid",  
+	// 	"status": "Paid",
 	// })
 	// if err == nil {
 	// 	http.Error(w, "Invoice already exists for this payment", http.StatusBadRequest)
@@ -454,8 +454,36 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ambil semua invoice dari koleksi `invoices`
-	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{})
+	// Validasi token dari header Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	const bearerPrefix = "Bearer "
+	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+		http.Error(w, "Invalid token format", http.StatusUnauthorized)
+		return
+	}
+	token := authHeader[len(bearerPrefix):]
+
+	// Validasi token di database
+	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+
+	// Ambil data user berdasarkan email dari token
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Ambil invoice berdasarkan nama user yang login
+	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{"name": user.Name})
 	if err != nil {
 		http.Error(w, "Oops! We couldn't fetch the invoices. Please contact support if the issue persists.", http.StatusInternalServerError)
 		return
