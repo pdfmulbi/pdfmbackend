@@ -476,19 +476,40 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log email dari token untuk debugging
+	log.Printf("[GetInvoicesHandler] Token valid, email: %s", tokenData.Email)
+
 	// Ambil data user berdasarkan email dari token
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
 	if err != nil {
+		log.Printf("[GetInvoicesHandler] User not found for email: %s, error: %v", tokenData.Email, err)
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	// Ambil invoice berdasarkan email user yang login (email unik dan lebih reliable)
-	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{"email": user.Email})
+	// Log user ditemukan untuk debugging
+	log.Printf("[GetInvoicesHandler] User found: name=%s, email=%s", user.Name, user.Email)
+
+	// Filter invoice berdasarkan NAMA user (untuk backward compatibility dengan data existing)
+	// Invoice lama hanya punya field "name", invoice baru akan punya "name" dan "email"
+	// Gunakan $or untuk mendukung kedua kasus
+	filter := bson.M{
+		"$or": []bson.M{
+			{"name": user.Name},
+			{"email": user.Email},
+		},
+	}
+	log.Printf("[GetInvoicesHandler] Fetching invoices with filter: %+v", filter)
+
+	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", filter)
 	if err != nil {
+		log.Printf("[GetInvoicesHandler] Error fetching invoices: %v", err)
 		http.Error(w, "Oops! We couldn't fetch the invoices. Please contact support if the issue persists.", http.StatusInternalServerError)
 		return
 	}
+
+	// Log jumlah invoice yang ditemukan
+	log.Printf("[GetInvoicesHandler] Found %d invoices for user: %s", len(invoices), user.Name)
 
 	// Kirim data invoice dalam format JSON
 	w.Header().Set("Content-Type", "application/json")
