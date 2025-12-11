@@ -423,6 +423,7 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	invoice := model.Invoice{
 		ID:            primitive.NewObjectID(),
 		Name:          user.Name,
+		Email:         user.Email,
 		Amount:        paymentData.Amount,
 		Status:        "Paid",
 		Details:       "Support Payment",
@@ -482,8 +483,8 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ambil invoice berdasarkan nama user yang login
-	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{"name": user.Name})
+	// Ambil invoice berdasarkan email user yang login (email unik dan lebih reliable)
+	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", bson.M{"email": user.Email})
 	if err != nil {
 		http.Error(w, "Oops! We couldn't fetch the invoices. Please contact support if the issue persists.", http.StatusInternalServerError)
 		return

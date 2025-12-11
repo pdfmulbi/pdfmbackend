@@ -7,19 +7,20 @@ import (
 )
 
 type PdfmUsers struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name          string             `bson:"name" json:"name"`
-	Email         string             `bson:"email" json:"email"`
-	Password      string             `bson:"password" json:"password"`
-	IsAdmin       bool               `bson:"isAdmin" json:"isAdmin"`
-	IsSupport     bool               `bson:"isSupport" json:"isSupport"`
-	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name      string             `bson:"name" json:"name"`
+	Email     string             `bson:"email" json:"email"`
+	Password  string             `bson:"password" json:"password"`
+	IsAdmin   bool               `bson:"isAdmin" json:"isAdmin"`
+	IsSupport bool               `bson:"isSupport" json:"isSupport"`
+	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
 type Invoice struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name          string             `bson:"name" json:"name"`
+	Email         string             `bson:"email" json:"email"`
 	Amount        int                `bson:"amount" json:"amount"`
 	Status        string             `bson:"status" json:"status"` //"Paid", "Pending", "Failed"
 	Details       string             `bson:"details" json:"details"`
