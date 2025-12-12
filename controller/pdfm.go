@@ -490,9 +490,15 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 	// Log user ditemukan untuk debugging
 	log.Printf("[GetInvoicesHandler] User found: name=%s, email=%s", user.Name, user.Email)
 
-	// Filter invoice berdasarkan EMAIL user untuk keamanan dan uniqueness
-	// Email lebih reliable karena unik per user dan tidak berubah
-	filter := bson.M{"email": user.Email}
+	// Filter invoice berdasarkan EMAIL atau NAME user
+	// Email diprioritaskan untuk keamanan, name sebagai fallback untuk invoice lama yang belum punya email
+	// Invoice baru akan selalu punya email, invoice lama mungkin hanya punya name
+	filter := bson.M{
+		"$or": []bson.M{
+			{"email": user.Email},
+			{"email": bson.M{"$exists": false}, "name": user.Name}, // fallback: invoice tanpa email, cocokkan by name
+		},
+	}
 	log.Printf("[GetInvoicesHandler] Fetching invoices with filter: %+v", filter)
 
 	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", filter)
