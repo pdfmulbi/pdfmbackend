@@ -535,3 +535,116 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(invoices)
 }
+
+// UploadProfilePhotoHandler handles uploading profile photo (Base64)
+func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Validasi token dari header Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	const bearerPrefix = "Bearer "
+	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+		http.Error(w, "Invalid token format", http.StatusUnauthorized)
+		return
+	}
+	token := authHeader[len(bearerPrefix):]
+
+	// Validasi token di database
+	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+
+	// Decode request body
+	var requestBody struct {
+		ProfilePhoto string `json:"profilePhoto"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validasi foto tidak kosong
+	if requestBody.ProfilePhoto == "" {
+		http.Error(w, "Profile photo is required", http.StatusBadRequest)
+		return
+	}
+
+	// Update user dengan foto profil baru
+	filter := bson.M{"email": tokenData.Email}
+	pipeline := []bson.M{
+		{"$set": bson.M{
+			"profilePhoto": requestBody.ProfilePhoto,
+			"updatedAt":    time.Now(),
+		}},
+	}
+
+	result, err := atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, pipeline)
+	if err != nil {
+		log.Printf("[UploadProfilePhotoHandler] Error updating profile photo: %v", err)
+		http.Error(w, "Failed to update profile photo: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("[UploadProfilePhotoHandler] Profile photo updated for user: %s", tokenData.Email)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Profile photo updated successfully",
+	})
+}
+
+// GetProfilePhotoHandler returns the profile photo for authenticated user
+func GetProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Validasi token dari header Authorization
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	const bearerPrefix = "Bearer "
+	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+		http.Error(w, "Invalid token format", http.StatusUnauthorized)
+		return
+	}
+	token := authHeader[len(bearerPrefix):]
+
+	// Validasi token di database
+	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+
+	// Ambil data user
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"profilePhoto": user.ProfilePhoto,
+	})
+}

@@ -196,6 +196,12 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetCountDocUser(w, r)
 
 	//PDFM
+	//Profile Photo
+	case method == "POST" && path == "/pdfm/profile/photo":
+		controller.UploadProfilePhotoHandler(w, r)
+	case method == "GET" && path == "/pdfm/profile/photo":
+		controller.GetProfilePhotoHandler(w, r)
+
 	//Register
 	case method == "POST" && path == "/pdfm/register":
 		controller.RegisterHandler(w, r)
