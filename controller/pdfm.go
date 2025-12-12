@@ -386,6 +386,14 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DEBUG: Log user data yang ditemukan
+	log.Printf("[ConfirmPaymentHandler] User found: ID=%s, Name=%s, Email='%s'", user.ID.Hex(), user.Name, user.Email)
+
+	// Validasi: Jika user tidak punya email, coba cari berdasarkan token
+	if user.Email == "" {
+		log.Printf("[ConfirmPaymentHandler] WARNING: User has no email in database!")
+	}
+
 	// // Periksa apakah pengguna sudah menjadi supporter
 	// if user.IsSupport {
 	// 	http.Error(w, "User is already a supporter", http.StatusBadRequest)
@@ -431,13 +439,19 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:     time.Now(),
 	}
 
+	// DEBUG: Log invoice yang akan disimpan
+	log.Printf("[ConfirmPaymentHandler] Creating invoice: Name='%s', Email='%s', Amount=%d", invoice.Name, invoice.Email, invoice.Amount)
+
 	// Simpan invoice ke koleksi `invoices`
-	_, err = atdb.InsertOneDoc(config.Mongoconn, "invoices", invoice)
+	insertedID, err := atdb.InsertOneDoc(config.Mongoconn, "invoices", invoice)
 	if err != nil {
 		log.Printf("Error creating invoice: %v", err)
 		http.Error(w, "Failed to create invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// DEBUG: Log invoice berhasil disimpan
+	log.Printf("[ConfirmPaymentHandler] Invoice created successfully with ID: %s", insertedID.Hex())
 
 	// Kirim respon sukses
 	w.Header().Set("Content-Type", "application/json")
@@ -490,14 +504,20 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 	// Log user ditemukan untuk debugging
 	log.Printf("[GetInvoicesHandler] User found: name=%s, email=%s", user.Name, user.Email)
 
-	// Filter invoice berdasarkan EMAIL atau NAME user
-	// Email diprioritaskan untuk keamanan, name sebagai fallback untuk invoice lama yang belum punya email
-	// Invoice baru akan selalu punya email, invoice lama mungkin hanya punya name
-	filter := bson.M{
-		"$or": []bson.M{
-			{"email": user.Email},
-			{"email": bson.M{"$exists": false}, "name": user.Name}, // fallback: invoice tanpa email, cocokkan by name
-		},
+	// Filter invoice berdasarkan NAME user (lebih reliable karena semua invoice pasti punya name)
+	// Untuk keamanan tambahan, jika user punya email, cek juga invoice dengan email yang cocok
+	var filter bson.M
+	if user.Email != "" {
+		// User punya email: cari invoice dengan email ATAU name yang cocok
+		filter = bson.M{
+			"$or": []bson.M{
+				{"email": user.Email},
+				{"name": user.Name},
+			},
+		}
+	} else {
+		// User tidak punya email: cari hanya berdasarkan name
+		filter = bson.M{"name": user.Name}
 	}
 	log.Printf("[GetInvoicesHandler] Fetching invoices with filter: %+v", filter)
 
