@@ -358,31 +358,11 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ambil token dari header untuk identifikasi user yang sebenarnya
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Missing token", http.StatusUnauthorized)
-		return
-	}
-
-	const bearerPrefix = "Bearer "
-	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		http.Error(w, "Invalid token format", http.StatusUnauthorized)
-		return
-	}
-	tokenStr := authHeader[len(bearerPrefix):]
-
-	// Validasi token
-	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": tokenStr})
-	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
-		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-		return
-	}
-
-	// Parse request body
 	var paymentData struct {
-		Amount int `json:"amount"` // Nominal pembayaran
+		Name   string `json:"name"`   // Nama pengguna
+		Amount int    `json:"amount"` // Nominal pembayaran
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&paymentData); err != nil {
 		http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
 		return
@@ -394,35 +374,56 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ambil user berdasarkan email dari token (BUKAN dari request body!)
-	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
+	// Filter untuk mencari pengguna berdasarkan nama
+	filter := bson.M{"name": paymentData.Name}
+
+	// Pastikan pengguna ada
+	var user model.PdfmUsers
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
-		log.Printf("[ConfirmPaymentHandler] User not found for email: %s, error: %v", tokenData.Email, err)
-		http.Error(w, "User not found", http.StatusNotFound)
+		log.Printf("Error finding user: %v", err)
+		http.Error(w, "User not found: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
-	log.Printf("[ConfirmPaymentHandler] User found: ID=%s, Name=%s, Email=%s", user.ID.Hex(), user.Name, user.Email)
+	// // Periksa apakah pengguna sudah menjadi supporter
+	// if user.IsSupport {
+	// 	http.Error(w, "User is already a supporter", http.StatusBadRequest)
+	// 	return
+	// }
 
-	// Update user menjadi supporter
-	_, err = atdb.UpdateWithPipeline(config.Mongoconn, "users", bson.M{"_id": user.ID}, []bson.M{
+	// // Periksa duplikasi invoice
+	// _, err = atdb.GetOneDoc[model.Invoice](config.Mongoconn, "invoices", bson.M{
+	// 	"name":   paymentData.Name,
+	// 	"amount": paymentData.Amount,
+	// 	"status": "Paid",
+	// })
+	// if err == nil {
+	// 	http.Error(w, "Invoice already exists for this payment", http.StatusBadRequest)
+	// 	return
+	// }
+
+	// Gunakan pipeline untuk memperbarui pengguna
+	pipeline := []bson.M{
 		{"$set": bson.M{
 			"isSupport": true,
 			"updatedAt": time.Now(),
 		}},
-	})
+	}
+
+	// Perbarui pengguna
+	_, err = atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, pipeline)
 	if err != nil {
-		log.Printf("[ConfirmPaymentHandler] Error updating user: %v", err)
+		log.Printf("Error updating user: %v", err)
 		http.Error(w, "Failed to update user: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Buat invoice baru dengan userId sebagai identifier unik
+	// Buat invoice baru
 	invoice := model.Invoice{
 		ID:            primitive.NewObjectID(),
-		UserID:        user.ID,    // ObjectID user - UNIQUE!
-		UserEmail:     user.Email, // Email untuk reference
-		UserName:      user.Name,  // Nama untuk display
+		Name:          user.Name,
+		Email:         user.Email,
 		Amount:        paymentData.Amount,
 		Status:        "Paid",
 		Details:       "Support Payment",
@@ -430,18 +431,13 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:     time.Now(),
 	}
 
-	log.Printf("[ConfirmPaymentHandler] Creating invoice: UserID=%s, UserEmail=%s, Amount=%d",
-		invoice.UserID.Hex(), invoice.UserEmail, invoice.Amount)
-
-	// Simpan invoice
+	// Simpan invoice ke koleksi `invoices`
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "invoices", invoice)
 	if err != nil {
-		log.Printf("[ConfirmPaymentHandler] Error creating invoice: %v", err)
+		log.Printf("Error creating invoice: %v", err)
 		http.Error(w, "Failed to create invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("[ConfirmPaymentHandler] Invoice created successfully for user: %s", user.Email)
 
 	// Kirim respon sukses
 	w.Header().Set("Content-Type", "application/json")
@@ -480,6 +476,7 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log email dari token untuk debugging
 	log.Printf("[GetInvoicesHandler] Token valid, email: %s", tokenData.Email)
 
 	// Ambil data user berdasarkan email dari token
@@ -490,19 +487,19 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[GetInvoicesHandler] User found: ID=%s, Name=%s, Email=%s", user.ID.Hex(), user.Name, user.Email)
+	// Log user ditemukan untuk debugging
+	log.Printf("[GetInvoicesHandler] User found: name=%s, email=%s", user.Name, user.Email)
 
-	// Filter invoice berdasarkan userId (UTAMA) atau name/email (backward compatibility)
-	// Invoice baru punya field "userId", invoice lama mungkin hanya punya "name" atau "email"
+	// Filter invoice berdasarkan NAMA user (untuk backward compatibility dengan data existing)
+	// Invoice lama hanya punya field "name", invoice baru akan punya "name" dan "email"
+	// Gunakan $or untuk mendukung kedua kasus
 	filter := bson.M{
 		"$or": []bson.M{
-			{"userId": user.ID},       // Invoice baru dengan userId
-			{"userEmail": user.Email}, // Invoice baru dengan userEmail
-			{"email": user.Email},     // Invoice lama dengan email
-			{"name": user.Name},       // Invoice lama dengan name
+			{"name": user.Name},
+			{"email": user.Email},
 		},
 	}
-	log.Printf("[GetInvoicesHandler] Fetching invoices with userId: %s", user.ID.Hex())
+	log.Printf("[GetInvoicesHandler] Fetching invoices with filter: %+v", filter)
 
 	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", filter)
 	if err != nil {
@@ -511,6 +508,7 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log jumlah invoice yang ditemukan
 	log.Printf("[GetInvoicesHandler] Found %d invoices for user: %s", len(invoices), user.Name)
 
 	// Kirim data invoice dalam format JSON
