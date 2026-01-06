@@ -208,12 +208,12 @@ func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 
 // HistoryItem represents a unified history entry
 type HistoryItem struct {
-	ID          primitive.ObjectID `json:"id"`
-	Type        string             `json:"type"`        // merge, compress, convert, summary
-	Description string             `json:"description"` // Human readable description
-	FileName    string             `json:"file_name"`
-	Details     interface{}        `json:"details,omitempty"` // Additional details
-	CreatedAt   time.Time          `json:"created_at"`
+	ID          string      `json:"id"`          // ObjectID as hex string
+	Type        string      `json:"type"`        // merge, compress, convert, summary
+	Description string      `json:"description"` // Human readable description
+	FileName    string      `json:"file_name"`
+	Details     interface{} `json:"details,omitempty"` // Additional details
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 func GetAllHistory(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +233,7 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 		for _, m := range mergeData {
 			fileCount := len(m.InputFiles)
 			allHistory = append(allHistory, HistoryItem{
-				ID:          m.ID,
+				ID:          m.ID.Hex(),
 				Type:        "merge",
 				Description: "Merged " + string(rune(fileCount+'0')) + " PDF files",
 				FileName:    m.OutputFile,
@@ -248,7 +248,7 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 	if err == nil && compressData != nil {
 		for _, c := range compressData {
 			allHistory = append(allHistory, HistoryItem{
-				ID:          c.ID,
+				ID:          c.ID.Hex(),
 				Type:        "compress",
 				Description: "Compressed PDF file",
 				FileName:    c.FileName,
@@ -267,7 +267,7 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 	if err == nil && convertData != nil {
 		for _, cv := range convertData {
 			allHistory = append(allHistory, HistoryItem{
-				ID:          cv.ID,
+				ID:          cv.ID.Hex(),
 				Type:        "convert",
 				Description: "Converted " + cv.SourceFormat + " to " + cv.TargetFormat,
 				FileName:    cv.FileName,
@@ -285,7 +285,7 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 	if err == nil && summaryData != nil {
 		for _, s := range summaryData {
 			allHistory = append(allHistory, HistoryItem{
-				ID:          s.ID,
+				ID:          s.ID.Hex(),
 				Type:        "summary",
 				Description: "Generated PDF summary",
 				FileName:    s.FileName,
