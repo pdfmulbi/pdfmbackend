@@ -244,29 +244,33 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	case method == "DELETE" && path == "/pdfm/notifications":
 		controller.ClearNotifications(w, r)
 
-	// 1. Merge Logs
-    case method == "POST" && path == "/pdfm/log/merge":
-        controller.CreateMergeHistory(w, r)
-    case method == "GET" && path == "/pdfm/log/merge":
-        controller.GetMergeHistory(w, r)
+		// 1. Merge Logs
+	case method == "POST" && path == "/pdfm/log/merge":
+		controller.CreateMergeHistory(w, r)
+	case method == "GET" && path == "/pdfm/log/merge":
+		controller.GetMergeHistory(w, r)
 
-    // 2. Compress Logs
-    case method == "POST" && path == "/pdfm/log/compress":
-        controller.CreateCompressHistory(w, r)
-    case method == "GET" && path == "/pdfm/log/compress":
-        controller.GetCompressHistory(w, r)
+	// 2. Compress Logs
+	case method == "POST" && path == "/pdfm/log/compress":
+		controller.CreateCompressHistory(w, r)
+	case method == "GET" && path == "/pdfm/log/compress":
+		controller.GetCompressHistory(w, r)
 
-    // 3. Convert Logs
-    case method == "POST" && path == "/pdfm/log/convert":
-        controller.CreateConvertHistory(w, r)
-    case method == "GET" && path == "/pdfm/log/convert":
-        controller.GetConvertHistory(w, r)
+	// 3. Convert Logs
+	case method == "POST" && path == "/pdfm/log/convert":
+		controller.CreateConvertHistory(w, r)
+	case method == "GET" && path == "/pdfm/log/convert":
+		controller.GetConvertHistory(w, r)
 
-    // 4. Summary Logs
-    case method == "POST" && path == "/pdfm/log/summary":
-        controller.CreateSummaryHistory(w, r)
-    case method == "GET" && path == "/pdfm/log/summary":
-        controller.GetSummaryHistory(w, r)
+	// 4. Summary Logs
+	case method == "POST" && path == "/pdfm/log/summary":
+		controller.CreateSummaryHistory(w, r)
+	case method == "GET" && path == "/pdfm/log/summary":
+		controller.GetSummaryHistory(w, r)
+
+	// 5. All History (Combined)
+	case method == "GET" && path == "/pdfm/history/all":
+		controller.GetAllHistory(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":

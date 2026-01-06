@@ -203,6 +203,122 @@ func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==========================================
+// 5. UNIFIED HISTORY - SEMUA AKTIVITAS USER
+// ==========================================
+
+// HistoryItem represents a unified history entry
+type HistoryItem struct {
+	ID          primitive.ObjectID `json:"id"`
+	Type        string             `json:"type"`        // merge, compress, convert, summary
+	Description string             `json:"description"` // Human readable description
+	FileName    string             `json:"file_name"`
+	Details     interface{}        `json:"details,omitempty"` // Additional details
+	CreatedAt   time.Time          `json:"created_at"`
+}
+
+func GetAllHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	user, err := GetUserFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	var allHistory []HistoryItem
+
+	// 1. Ambil Merge History
+	mergeData, err := atdb.GetAllDoc[[]model.MergeHistory](config.Mongoconn, "merge_history", bson.M{"user_id": user.ID})
+	if err == nil && mergeData != nil {
+		for _, m := range mergeData {
+			fileCount := len(m.InputFiles)
+			allHistory = append(allHistory, HistoryItem{
+				ID:          m.ID,
+				Type:        "merge",
+				Description: "Merged " + string(rune(fileCount+'0')) + " PDF files",
+				FileName:    m.OutputFile,
+				Details:     map[string]interface{}{"input_files": m.InputFiles},
+				CreatedAt:   m.CreatedAt,
+			})
+		}
+	}
+
+	// 2. Ambil Compress History
+	compressData, err := atdb.GetAllDoc[[]model.CompressHistory](config.Mongoconn, "compress_history", bson.M{"user_id": user.ID})
+	if err == nil && compressData != nil {
+		for _, c := range compressData {
+			allHistory = append(allHistory, HistoryItem{
+				ID:          c.ID,
+				Type:        "compress",
+				Description: "Compressed PDF file",
+				FileName:    c.FileName,
+				Details: map[string]interface{}{
+					"original_size":   c.OriginalSize,
+					"compressed_size": c.CompressedSize,
+					"status":          c.Status,
+				},
+				CreatedAt: c.CreatedAt,
+			})
+		}
+	}
+
+	// 3. Ambil Convert History
+	convertData, err := atdb.GetAllDoc[[]model.ConvertHistory](config.Mongoconn, "convert_history", bson.M{"user_id": user.ID})
+	if err == nil && convertData != nil {
+		for _, cv := range convertData {
+			allHistory = append(allHistory, HistoryItem{
+				ID:          cv.ID,
+				Type:        "convert",
+				Description: "Converted " + cv.SourceFormat + " to " + cv.TargetFormat,
+				FileName:    cv.FileName,
+				Details: map[string]interface{}{
+					"source_format": cv.SourceFormat,
+					"target_format": cv.TargetFormat,
+				},
+				CreatedAt: cv.CreatedAt,
+			})
+		}
+	}
+
+	// 4. Ambil Summary History
+	summaryData, err := atdb.GetAllDoc[[]model.SummaryHistory](config.Mongoconn, "summary_history", bson.M{"user_id": user.ID})
+	if err == nil && summaryData != nil {
+		for _, s := range summaryData {
+			allHistory = append(allHistory, HistoryItem{
+				ID:          s.ID,
+				Type:        "summary",
+				Description: "Generated PDF summary",
+				FileName:    s.FileName,
+				Details: map[string]interface{}{
+					"language": s.Language,
+				},
+				CreatedAt: s.CreatedAt,
+			})
+		}
+	}
+
+	// Sort by CreatedAt descending (newest first)
+	for i := 0; i < len(allHistory)-1; i++ {
+		for j := i + 1; j < len(allHistory); j++ {
+			if allHistory[j].CreatedAt.After(allHistory[i].CreatedAt) {
+				allHistory[i], allHistory[j] = allHistory[j], allHistory[i]
+			}
+		}
+	}
+
+	// Return empty array if no history
+	if allHistory == nil {
+		allHistory = []HistoryItem{}
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  200,
+		"message": "History retrieved successfully",
+		"history": allHistory,
+	})
+}
+
+// ==========================================
 // HELPER: MENGAMBIL USER DARI TOKEN
 // (Supaya kita tahu log ini punya siapa)
 // ==========================================
@@ -221,15 +337,15 @@ func GetUserFromToken(r *http.Request) (model.PdfmUsers, error) {
 	token := authHeader[len(bearerPrefix):]
 
 	//3. Cek Token valid atau tidak di database tokens
-    tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
-    
-    if err != nil {
-        return model.PdfmUsers{}, err
-    }
-    
-    if tokenData.ExpiresAt.Before(time.Now()) {
-        return model.PdfmUsers{}, errors.New("token sudah kadaluarsa")
-    }
+	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+
+	if err != nil {
+		return model.PdfmUsers{}, err
+	}
+
+	if tokenData.ExpiresAt.Before(time.Now()) {
+		return model.PdfmUsers{}, errors.New("token sudah kadaluarsa")
+	}
 
 	// 4. Ambil data User asli berdasarkan email di token
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
