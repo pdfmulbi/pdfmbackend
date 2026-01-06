@@ -319,6 +319,80 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==========================================
+// 6. DELETE HISTORY ITEM
+// ==========================================
+
+// DeleteHistoryRequest represents the request body for deleting history
+type DeleteHistoryRequest struct {
+	ID   string `json:"id"`
+	Type string `json:"type"` // merge, compress, convert, summary
+}
+
+func DeleteHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	user, err := GetUserFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Parse request body
+	var req DeleteHistoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.ID == "" || req.Type == "" {
+		http.Error(w, "ID and type are required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert string ID to ObjectID
+	objectID, err := primitive.ObjectIDFromHex(req.ID)
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Determine collection based on type
+	var collectionName string
+	switch req.Type {
+	case "merge":
+		collectionName = "merge_history"
+	case "compress":
+		collectionName = "compress_history"
+	case "convert":
+		collectionName = "convert_history"
+	case "summary":
+		collectionName = "summary_history"
+	default:
+		http.Error(w, "Invalid history type", http.StatusBadRequest)
+		return
+	}
+
+	// Delete from database (only if belongs to user)
+	filter := bson.M{"_id": objectID, "user_id": user.ID}
+	result, err := config.Mongoconn.Collection(collectionName).DeleteOne(r.Context(), filter)
+	if err != nil {
+		http.Error(w, "Failed to delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if result.DeletedCount == 0 {
+		http.Error(w, "History item not found or not authorized", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  200,
+		"message": "History deleted successfully",
+	})
+}
+
+// ==========================================
 // HELPER: MENGAMBIL USER DARI TOKEN
 // (Supaya kita tahu log ini punya siapa)
 // ==========================================

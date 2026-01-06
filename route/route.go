@@ -271,6 +271,8 @@ func URL(w http.ResponseWriter, r *http.Request) {
 	// 5. All History (Combined)
 	case method == "GET" && path == "/pdfm/history/all":
 		controller.GetAllHistory(w, r)
+	case method == "DELETE" && path == "/pdfm/history/delete":
+		controller.DeleteHistory(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":
