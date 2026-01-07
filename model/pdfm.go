@@ -29,6 +29,14 @@ type Invoice struct {
 	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
 }
 
+type Feedback struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	UserID    string             `bson:"user_id,omitempty" json:"user_id"` // Opsional
+	Name      string             `bson:"name" json:"name"`
+	Email     string             `bson:"email" json:"email"`
+	Message   string             `bson:"message" json:"message"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+}
 type Token struct {
 	Token     string    `bson:"token"`
 	Email     string    `bson:"email"`
