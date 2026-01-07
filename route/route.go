@@ -273,10 +273,12 @@ func URL(w http.ResponseWriter, r *http.Request) {
 		controller.GetAllHistory(w, r)
 	case method == "DELETE" && path == "/pdfm/history/delete":
 		controller.DeleteHistory(w, r)
-	
-	// Feedback (Kotak Saran / Contact Us)
-    case method == "POST" && path == "/pdfm/feedback":
-        controller.InsertFeedback(w, r)
+
+		// Feedback (Kotak Saran / Contact Us)
+	case method == "POST" && path == "/pdfm/feedback":
+		controller.InsertFeedback(w, r)
+	case method == "GET" && path == "/pdfm/feedback":
+		controller.GetAllFeedback(w, r)
 
 	// Google Auth
 	case method == "POST" && path == "/auth/users":

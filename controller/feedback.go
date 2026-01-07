@@ -8,6 +8,7 @@ import (
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/model"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -59,7 +60,7 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 
 	// 6. PENTING: Isi data diri otomatis dari Token (Biar aman & valid)
 	data.UserID = user.ID.Hex() // Simpan ID user
-	
+
 	// Jika frontend tidak mengirim nama/email, pakai data dari akun login
 	if data.Name == "" {
 		data.Name = user.Name
@@ -80,4 +81,49 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 		"message": "Terima kasih atas masukan Anda!",
 		"id":      data.ID,
 	})
+}
+
+// ==========================================
+// GET ALL FEEDBACK (Admin Only)
+// ==========================================
+func GetAllFeedback(w http.ResponseWriter, r *http.Request) {
+	// 1. Setup Header CORS
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 2. Cek Admin Authentication
+	user, err := GetUserFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// 3. Pastikan user adalah admin
+	if !user.IsAdmin {
+		http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+		return
+	}
+
+	// 4. Ambil semua feedback dari database
+	var feedbacks []model.Feedback
+	feedbacks, err = atdb.GetAllDoc[[]model.Feedback](config.Mongoconn, "feedback", bson.M{})
+	if err != nil {
+		http.Error(w, "Gagal mengambil data feedback: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 5. Return data feedback
+	json.NewEncoder(w).Encode(feedbacks)
 }
