@@ -18,6 +18,16 @@ import (
 )
 
 // GetNotifications retrieves all notifications for the authenticated user
+// GetNotifications godoc
+// @Summary Lihat Notifikasi
+// @Description Mengambil daftar notifikasi milik user, diurutkan dari yang terbaru
+// @Tags Notification
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /pdfm/notifications [get]
+// @Security BearerAuth
 func GetNotifications(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -77,6 +87,17 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddNotification creates a new notification for the authenticated user
+// AddNotification godoc
+// @Summary Buat Notifikasi (System)
+// @Description Menambahkan notifikasi baru (biasanya trigger dari sistem)
+// @Tags Notification
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload {type, message, icon, file_name}"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /pdfm/notifications [post]
+// @Security BearerAuth
 func AddNotification(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -153,6 +174,15 @@ func AddNotification(w http.ResponseWriter, r *http.Request) {
 }
 
 // MarkAllAsRead marks all notifications as read for the authenticated user
+// MarkAllAsRead godoc
+// @Summary Tandai Semua Dibaca
+// @Description Mengubah status semua notifikasi user menjadi 'read' (sudah dibaca)
+// @Tags Notification
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /pdfm/notifications/read [put]
+// @Security BearerAuth
 func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -198,6 +228,15 @@ func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 }
 
 // ClearNotifications deletes all notifications for the authenticated user
+// ClearNotifications godoc
+// @Summary Hapus Semua Notifikasi
+// @Description Membersihkan seluruh riwayat notifikasi milik user
+// @Tags Notification
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /pdfm/notifications [delete]
+// @Security BearerAuth
 func ClearNotifications(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")

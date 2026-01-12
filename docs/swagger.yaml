@@ -1,4 +1,873 @@
+definitions:
+  model.CompressHistory:
+    properties:
+      compressed_size:
+        type: integer
+      created_at:
+        type: string
+      file_name:
+        type: string
+      id:
+        type: string
+      original_size:
+        type: integer
+      status:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.ConvertHistory:
+    properties:
+      created_at:
+        type: string
+      file_name:
+        type: string
+      id:
+        type: string
+      source_format:
+        type: string
+      target_format:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.Feedback:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      user_id:
+        description: Opsional
+        type: string
+    type: object
+  model.Invoice:
+    properties:
+      amount:
+        type: integer
+      createdAt:
+        type: string
+      details:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      paymentMethod:
+        type: string
+      status:
+        description: '"Paid", "Pending", "Failed"'
+        type: string
+    type: object
+  model.MergeHistory:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      input_files:
+        items:
+          type: string
+        type: array
+      output_file:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.PdfmUsers:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      isAdmin:
+        type: boolean
+      isSupport:
+        type: boolean
+      name:
+        type: string
+      password:
+        type: string
+      profilePhoto:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.SummaryHistory:
+    properties:
+      created_at:
+        type: string
+      file_name:
+        type: string
+      id:
+        type: string
+      language:
+        type: string
+      summary_text:
+        type: string
+      user_id:
+        type: string
+    type: object
 info:
   contact: {}
-paths: {}
+paths:
+  /pdfm/create/users:
+    post:
+      consumes:
+      - application/json
+      description: Membuat user baru secara langsung (bypass register)
+      parameters:
+      - description: User Data
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PdfmUsers'
+      summary: Tambah User Manual (Admin)
+      tags:
+      - User Management
+  /pdfm/delete/users:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus user berdasarkan ID
+      parameters:
+      - description: 'Payload {id: ...}'
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted successfully
+          schema:
+            type: string
+      summary: Hapus User
+      tags:
+      - User Management
+  /pdfm/feedback:
+    get:
+      consumes:
+      - application/json
+      description: Hanya admin yang bisa melihat daftar feedback
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Feedback'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Melihat Semua Feedback (Admin Only)
+      tags:
+      - Feedback
+    post:
+      consumes:
+      - application/json
+      description: User mengirim kritik dan saran (Wajib Login)
+      parameters:
+      - description: Payload [message (wajib), name, email]
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mengirim Feedback (User Login)
+      tags:
+      - Feedback
+  /pdfm/get/users:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil list semua pengguna yang terdaftar
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.PdfmUsers'
+            type: array
+      summary: Ambil Semua Data User (Admin)
+      tags:
+      - User Management
+  /pdfm/getone/users:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil data user yang sedang login berdasarkan Token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PdfmUsers'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cek Profil Saya
+      tags:
+      - User Profile
+  /pdfm/getoneadmin/users:
+    get:
+      consumes:
+      - application/json
+      description: Mencari user berdasarkan Query Param ID atau Name
+      parameters:
+      - description: User ID
+        in: query
+        name: id
+        type: string
+      - description: User Name
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PdfmUsers'
+      summary: Cari Satu User (Admin)
+      tags:
+      - User Management
+  /pdfm/history/all:
+    get:
+      consumes:
+      - application/json
+      description: Menggabungkan semua jenis riwayat (Merge, Compress, Convert, Summary)
+        menjadi satu list
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Semua Riwayat (Gabungan)
+      tags:
+      - History - Unified
+  /pdfm/history/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus satu item riwayat berdasarkan ID dan Tipe
+      parameters:
+      - description: 'Payload {id: ''...'', type: ''merge/compress/convert/summary''}'
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hapus Riwayat
+      tags:
+      - History - Unified
+  /pdfm/invoices:
+    get:
+      consumes:
+      - application/json
+      description: Melihat riwayat pembayaran pengguna yang login
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Invoice'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lihat Invoice Saya
+      tags:
+      - Payment
+  /pdfm/log/compress:
+    get:
+      consumes:
+      - application/json
+      description: Menampilkan daftar riwayat compress user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CompressHistory'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Riwayat Compress
+      tags:
+      - History - Compress
+    post:
+      consumes:
+      - application/json
+      description: Mencatat riwayat kompresi PDF
+      parameters:
+      - description: Payload Data Compress
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Simpan Log Compress PDF
+      tags:
+      - History - Compress
+  /pdfm/log/convert:
+    get:
+      consumes:
+      - application/json
+      description: Menampilkan daftar riwayat convert user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ConvertHistory'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Riwayat Convert
+      tags:
+      - History - Convert
+    post:
+      consumes:
+      - application/json
+      description: 'Mencatat riwayat konversi PDF (misal: PDF to Word)'
+      parameters:
+      - description: Payload Data Convert
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Simpan Log Convert PDF
+      tags:
+      - History - Convert
+  /pdfm/log/merge:
+    get:
+      consumes:
+      - application/json
+      description: Menampilkan daftar riwayat merge user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.MergeHistory'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Riwayat Merge
+      tags:
+      - History - Merge
+    post:
+      consumes:
+      - application/json
+      description: Mencatat riwayat penggabungan PDF ke database
+      parameters:
+      - description: Payload Data Merge
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Simpan Log Merge PDF
+      tags:
+      - History - Merge
+  /pdfm/log/summary:
+    get:
+      consumes:
+      - application/json
+      description: Menampilkan daftar riwayat summary user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SummaryHistory'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Riwayat Summary
+      tags:
+      - History - Summary
+    post:
+      consumes:
+      - application/json
+      description: Mencatat riwayat ringkasan (summary) PDF
+      parameters:
+      - description: Payload Data Summary
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Simpan Log Summary PDF
+      tags:
+      - History - Summary
+  /pdfm/login:
+    post:
+      consumes:
+      - application/json
+      description: Masuk ke sistem untuk mendapatkan Token Akses
+      parameters:
+      - description: Payload [email, password]
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login Pengguna
+      tags:
+      - Auth
+  /pdfm/logout:
+    post:
+      consumes:
+      - application/json
+      description: Menghapus token akses dari database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Keluar Aplikasi (Logout)
+      tags:
+      - Auth
+  /pdfm/notifications:
+    delete:
+      consumes:
+      - application/json
+      description: Membersihkan seluruh riwayat notifikasi milik user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hapus Semua Notifikasi
+      tags:
+      - Notification
+    get:
+      consumes:
+      - application/json
+      description: Mengambil daftar notifikasi milik user, diurutkan dari yang terbaru
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Notifikasi
+      tags:
+      - Notification
+    post:
+      consumes:
+      - application/json
+      description: Menambahkan notifikasi baru (biasanya trigger dari sistem)
+      parameters:
+      - description: Payload {type, message, icon, file_name}
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Buat Notifikasi (System)
+      tags:
+      - Notification
+  /pdfm/notifications/read:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah status semua notifikasi user menjadi 'read' (sudah dibaca)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tandai Semua Dibaca
+      tags:
+      - Notification
+  /pdfm/payment:
+    post:
+      consumes:
+      - application/json
+      description: Mengubah status user menjadi Supporter setelah bayar
+      parameters:
+      - description: Payload [name, amount]
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Konfirmasi Pembayaran
+      tags:
+      - Payment
+  /pdfm/profile/photo:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil string Base64 foto profil user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Foto Profil
+      tags:
+      - User Profile
+    post:
+      consumes:
+      - application/json
+      description: Mengganti foto profil (Format Base64)
+      parameters:
+      - description: 'Payload {profilePhoto: ''base64...''}'
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload Foto Profil
+      tags:
+      - User Profile
+  /pdfm/register:
+    post:
+      consumes:
+      - application/json
+      description: User mendaftarkan diri dengan Nama, Email, dan Password
+      parameters:
+      - description: Payload [name, email, password]
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Pendaftaran Akun Baru
+      tags:
+      - Auth
+  /pdfm/update/users:
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui data user (nama, password, dll)
+      parameters:
+      - description: Update Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User updated successfully
+          schema:
+            type: string
+      summary: Update Data User
+      tags:
+      - User Management
 swagger: "2.0"

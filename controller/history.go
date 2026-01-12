@@ -16,6 +16,18 @@ import (
 // ==========================================
 // 1. HANDLER UNTUK MERGE HISTORY
 // ==========================================
+
+// CreateMergeHistory godoc
+// @Summary Simpan Log Merge PDF
+// @Description Mencatat riwayat penggabungan PDF ke database
+// @Tags History - Merge
+// @Accept json
+// @Produce json
+// @Param request body map[string]interface{} true "Payload Data Merge"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/merge [post]
+// @Security BearerAuth
 func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
 	// 1. Cek siapa yang login
 	user, err := GetUserFromToken(r)
@@ -51,6 +63,16 @@ func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetMergeHistory godoc
+// @Summary Lihat Riwayat Merge
+// @Description Menampilkan daftar riwayat merge user
+// @Tags History - Merge
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.MergeHistory
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/merge [get]
+// @Security BearerAuth
 func GetMergeHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -70,6 +92,18 @@ func GetMergeHistory(w http.ResponseWriter, r *http.Request) {
 // ==========================================
 // 2. HANDLER UNTUK COMPRESS HISTORY
 // ==========================================
+
+// CreateCompressHistory godoc
+// @Summary Simpan Log Compress PDF
+// @Description Mencatat riwayat kompresi PDF
+// @Tags History - Compress
+// @Accept json
+// @Produce json
+// @Param request body map[string]interface{} true "Payload Data Compress"
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/compress [post]
+// @Security BearerAuth
 func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -97,6 +131,16 @@ func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Log Compress berhasil disimpan"})
 }
 
+// GetCompressHistory godoc
+// @Summary Lihat Riwayat Compress
+// @Description Menampilkan daftar riwayat compress user
+// @Tags History - Compress
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.CompressHistory
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/compress [get]
+// @Security BearerAuth
 func GetCompressHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -115,6 +159,18 @@ func GetCompressHistory(w http.ResponseWriter, r *http.Request) {
 // ==========================================
 // 3. HANDLER UNTUK CONVERT HISTORY
 // ==========================================
+
+// CreateConvertHistory godoc
+// @Summary Simpan Log Convert PDF
+// @Description Mencatat riwayat konversi PDF (misal: PDF to Word)
+// @Tags History - Convert
+// @Accept json
+// @Produce json
+// @Param request body map[string]interface{} true "Payload Data Convert"
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/convert [post]
+// @Security BearerAuth
 func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -142,6 +198,16 @@ func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Log Convert berhasil disimpan"})
 }
 
+// GetConvertHistory godoc
+// @Summary Lihat Riwayat Convert
+// @Description Menampilkan daftar riwayat convert user
+// @Tags History - Convert
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.ConvertHistory
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/convert [get]
+// @Security BearerAuth
 func GetConvertHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -160,6 +226,18 @@ func GetConvertHistory(w http.ResponseWriter, r *http.Request) {
 // ==========================================
 // 4. HANDLER UNTUK SUMMARY HISTORY
 // ==========================================
+
+// CreateSummaryHistory godoc
+// @Summary Simpan Log Summary PDF
+// @Description Mencatat riwayat ringkasan (summary) PDF
+// @Tags History - Summary
+// @Accept json
+// @Produce json
+// @Param request body map[string]interface{} true "Payload Data Summary"
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/summary [post]
+// @Security BearerAuth
 func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -187,6 +265,16 @@ func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Log Summary berhasil disimpan"})
 }
 
+// GetSummaryHistory godoc
+// @Summary Lihat Riwayat Summary
+// @Description Menampilkan daftar riwayat summary user
+// @Tags History - Summary
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.SummaryHistory
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/log/summary [get]
+// @Security BearerAuth
 func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
@@ -216,6 +304,16 @@ type HistoryItem struct {
 	CreatedAt   time.Time   `json:"created_at"`
 }
 
+// GetAllHistory godoc
+// @Summary Lihat Semua Riwayat (Gabungan)
+// @Description Menggabungkan semua jenis riwayat (Merge, Compress, Convert, Summary) menjadi satu list
+// @Tags History - Unified
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/history/all [get]
+// @Security BearerAuth
 func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -328,6 +426,17 @@ type DeleteHistoryRequest struct {
 	Type string `json:"type"` // merge, compress, convert, summary
 }
 
+// DeleteHistory godoc
+// @Summary Hapus Riwayat
+// @Description Menghapus satu item riwayat berdasarkan ID dan Tipe
+// @Tags History - Unified
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload {id: '...', type: 'merge/compress/convert/summary'}"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Router /pdfm/history/delete [delete]
+// @Security BearerAuth
 func DeleteHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

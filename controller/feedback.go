@@ -15,6 +15,19 @@ import (
 // ==========================================
 // HANDLER UNTUK FEEDBACK (Masukan User)
 // ==========================================
+
+// InsertFeedback godoc
+// @Summary Mengirim Feedback (User Login)
+// @Description User mengirim kritik dan saran (Wajib Login)
+// @Tags Feedback
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload [message (wajib), name, email]"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/feedback [post]
+// @Security BearerAuth
 func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 	// 1. Setup Header (Standar CORS)
 	w.Header().Set("Content-Type", "application/json")
@@ -86,6 +99,18 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 // ==========================================
 // GET ALL FEEDBACK (Admin Only)
 // ==========================================
+
+// GetAllFeedback godoc
+// @Summary Melihat Semua Feedback (Admin Only)
+// @Description Hanya admin yang bisa melihat daftar feedback
+// @Tags Feedback
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.Feedback
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Router /pdfm/feedback [get]
+// @Security BearerAuth
 func GetAllFeedback(w http.ResponseWriter, r *http.Request) {
 	// 1. Setup Header CORS
 	w.Header().Set("Content-Type", "application/json")

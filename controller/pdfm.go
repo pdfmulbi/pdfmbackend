@@ -19,6 +19,15 @@ import (
 
 // Register
 // RegisterHandler menghandle permintaan registrasi.
+// @Summary Pendaftaran Akun Baru
+// @Description User mendaftarkan diri dengan Nama, Email, dan Password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload [name, email, password]"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /pdfm/register [post]
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
@@ -71,6 +80,16 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 // Login
 // GetUser menangani login dan menghasilkan token sederhana
+// GetUser godoc
+// @Summary Login Pengguna
+// @Description Masuk ke sistem untuk mendapatkan Token Akses
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload [email, password]"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/login [post]
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
@@ -123,6 +142,15 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout
+// LogoutHandler godoc
+// @Summary Keluar Aplikasi (Logout)
+// @Description Menghapus token akses dari database
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /pdfm/logout [post]
+// @Security BearerAuth
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -150,6 +178,14 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // CRUD
 // Get All Users
+// GetUsers godoc
+// @Summary Ambil Semua Data User (Admin)
+// @Description Mengambil list semua pengguna yang terdaftar
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.PdfmUsers
+// @Router /pdfm/get/users [get]
 func GetUsers(respw http.ResponseWriter, req *http.Request) {
 	users, err := atdb.GetAllDoc[[]model.PdfmUsers](config.Mongoconn, "users", bson.M{})
 	if err != nil {
@@ -160,6 +196,16 @@ func GetUsers(respw http.ResponseWriter, req *http.Request) {
 }
 
 // Get User By ID or Name for  Admin Dahsboard
+// GetOneUserAdmin godoc
+// @Summary Cari Satu User (Admin)
+// @Description Mencari user berdasarkan Query Param ID atau Name
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param id query string false "User ID"
+// @Param name query string false "User Name"
+// @Success 200 {object} model.PdfmUsers
+// @Router /pdfm/getoneadmin/users [get]
 func GetOneUserAdmin(respw http.ResponseWriter, req *http.Request) {
 	id := req.URL.Query().Get("id")
 	var filter bson.M
@@ -193,6 +239,16 @@ func GetOneUserAdmin(respw http.ResponseWriter, req *http.Request) {
 }
 
 // Get User Token
+// GetOneUser godoc
+// @Summary Cek Profil Saya
+// @Description Mengambil data user yang sedang login berdasarkan Token
+// @Tags User Profile
+// @Accept json
+// @Produce json
+// @Success 200 {object} model.PdfmUsers
+// @Failure 401 {object} map[string]string
+// @Router /pdfm/getone/users [get]
+// @Security BearerAuth
 func GetOneUser(respw http.ResponseWriter, req *http.Request) {
 	// Ambil token dari header Authorization
 	authHeader := req.Header.Get("Authorization")
@@ -230,6 +286,15 @@ func GetOneUser(respw http.ResponseWriter, req *http.Request) {
 }
 
 // Create User
+// CreateUser godoc
+// @Summary Tambah User Manual (Admin)
+// @Description Membuat user baru secara langsung (bypass register)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "User Data"
+// @Success 200 {object} model.PdfmUsers
+// @Router /pdfm/create/users [post]
 func CreateUser(respw http.ResponseWriter, req *http.Request) {
 	var newUser model.PdfmUsers
 	if err := json.NewDecoder(req.Body).Decode(&newUser); err != nil {
@@ -261,6 +326,15 @@ func CreateUser(respw http.ResponseWriter, req *http.Request) {
 }
 
 // Update User
+// UpdateUser godoc
+// @Summary Update Data User
+// @Description Memperbarui data user (nama, password, dll)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param request body map[string]interface{} true "Update Payload"
+// @Success 200 {string} string "User updated successfully"
+// @Router /pdfm/update/users [put]
 func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 	var updateUser struct {
 		ID        string `json:"id"`
@@ -324,6 +398,15 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 }
 
 // Delete User
+// DeleteUser godoc
+// @Summary Hapus User
+// @Description Menghapus user berdasarkan ID
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload {id: ...}"
+// @Success 200 {string} string "User deleted successfully"
+// @Router /pdfm/delete/users [delete]
 func DeleteUser(respw http.ResponseWriter, req *http.Request) {
 	var user struct {
 		ID string `json:"id"`
@@ -352,6 +435,15 @@ func DeleteUser(respw http.ResponseWriter, req *http.Request) {
 }
 
 // ConfirmPaymentHandler handles the payment confirmation and updates user status.
+// ConfirmPaymentHandler godoc
+// @Summary Konfirmasi Pembayaran
+// @Description Mengubah status user menjadi Supporter setelah bayar
+// @Tags Payment
+// @Accept json
+// @Produce json
+// @Param request body map[string]interface{} true "Payload [name, amount]"
+// @Success 200 {object} map[string]interface{}
+// @Router /pdfm/payment [post]
 func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -463,6 +555,15 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetInvoicesHandler godoc
+// @Summary Lihat Invoice Saya
+// @Description Melihat riwayat pembayaran pengguna yang login
+// @Tags Payment
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.Invoice
+// @Router /pdfm/invoices [get]
+// @Security BearerAuth
 func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -537,6 +638,16 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // UploadProfilePhotoHandler handles uploading profile photo (Base64)
+// UploadProfilePhotoHandler godoc
+// @Summary Upload Foto Profil
+// @Description Mengganti foto profil (Format Base64)
+// @Tags User Profile
+// @Accept json
+// @Produce json
+// @Param request body map[string]string true "Payload {profilePhoto: 'base64...'}"
+// @Success 200 {object} map[string]string
+// @Router /pdfm/profile/photo [post]
+// @Security BearerAuth
 func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -609,6 +720,15 @@ func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetProfilePhotoHandler returns the profile photo for authenticated user
+// GetProfilePhotoHandler godoc
+// @Summary Lihat Foto Profil
+// @Description Mengambil string Base64 foto profil user
+// @Tags User Profile
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /pdfm/profile/photo [get]
+// @Security BearerAuth
 func GetProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
