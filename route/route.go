@@ -2,10 +2,14 @@ package route
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/controller"
 	"github.com/gocroot/helper/at"
+
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "github.com/gocroot/docs"
 )
 
 func URL(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +20,11 @@ func URL(w http.ResponseWriter, r *http.Request) {
 
 	var method, path string = r.Method, r.URL.Path
 	switch {
+	
+	case strings.HasPrefix(path, "/swagger/"):
+		httpSwagger.WrapHandler(w, r)
+		return
+
 	case method == "GET" && path == "/":
 		controller.GetHome(w, r)
 
