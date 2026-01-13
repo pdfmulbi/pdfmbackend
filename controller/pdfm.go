@@ -130,6 +130,20 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Membau autologing untuk mengcek keaktifkan pengguna
+	go func() { // Pakai 'go func' biar jalan di background & gak bikin lemot login
+		loginLog := model.LoginLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			IPAddress: r.RemoteAddr,
+			UserAgent: r.UserAgent(),
+			LoginAt:   time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "login_logs", loginLog)
+	}()
+
 	response := map[string]interface{}{
 		"token":    token,
 		"userName": user.Name,

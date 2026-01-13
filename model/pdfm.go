@@ -37,6 +37,17 @@ type Feedback struct {
 	Message   string             `bson:"message" json:"message"`
 	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
 }
+
+type LoginLog struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	UserID    primitive.ObjectID `bson:"user_id" json:"user_id"`
+	Name      string             `bson:"name" json:"name"`
+	Email     string             `bson:"email" json:"email"`
+	IPAddress string             `bson:"ip_address" json:"ip_address"`
+	UserAgent string             `bson:"user_agent" json:"user_agent"`
+	LoginAt   time.Time          `bson:"login_at" json:"login_at"`
+}
+
 type Token struct {
 	Token     string    `bson:"token"`
 	Email     string    `bson:"email"`
