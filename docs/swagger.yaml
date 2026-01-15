@@ -2,18 +2,38 @@ definitions:
   model.CompressHistory:
     properties:
       compressed_size:
+        example: 1500000
         type: integer
       created_at:
         type: string
       file_name:
+        example: laporan_besar.pdf
         type: string
       id:
+        example: 65b...
         type: string
       original_size:
+        example: 5000000
         type: integer
       status:
+        example: success
         type: string
       user_id:
+        type: string
+    type: object
+  model.CompressInput:
+    properties:
+      compressed_size:
+        example: 1500000
+        type: integer
+      file_name:
+        example: laporan_besar.pdf
+        type: string
+      original_size:
+        example: 5000000
+        type: integer
+      status:
+        example: success
         type: string
     type: object
   model.ConvertHistory:
@@ -21,14 +41,46 @@ definitions:
       created_at:
         type: string
       file_name:
+        example: document.docx
         type: string
       id:
+        example: 65b...
         type: string
       source_format:
+        example: docx
         type: string
       target_format:
+        example: pdf
         type: string
       user_id:
+        type: string
+    type: object
+  model.ConvertInput:
+    properties:
+      file_name:
+        example: document.docx
+        type: string
+      source_format:
+        example: docx
+        type: string
+      target_format:
+        example: pdf
+        type: string
+    type: object
+  model.DeleteHistoryInput:
+    properties:
+      id:
+        example: 65b123...
+        type: string
+      type:
+        description: merge, compress, convert, summary
+        example: merge
+        type: string
+    type: object
+  model.DeleteUserInput:
+    properties:
+      id:
+        example: 65a423...
         type: string
     type: object
   model.Feedback:
@@ -45,6 +97,34 @@ definitions:
         type: string
       user_id:
         description: Opsional
+        type: string
+    type: object
+  model.FeedbackInput:
+    properties:
+      email:
+        example: budi@gmail.com
+        type: string
+      message:
+        example: Aplikasi ini sangat mantap!
+        type: string
+      name:
+        example: Budi
+        type: string
+    type: object
+  model.HistoryItem:
+    properties:
+      created_at:
+        type: string
+      description:
+        example: Merged 2 PDF files
+        type: string
+      details: {}
+      file_name:
+        type: string
+      id:
+        type: string
+      type:
+        example: merge
         type: string
     type: object
   model.Invoice:
@@ -67,19 +147,103 @@ definitions:
         description: '"Paid", "Pending", "Failed"'
         type: string
     type: object
+  model.LoginInput:
+    properties:
+      email:
+        example: example@gmail.com
+        type: string
+      password:
+        example: rahasia123
+        type: string
+    type: object
   model.MergeHistory:
     properties:
       created_at:
         type: string
       id:
+        example: 65b...
         type: string
       input_files:
+        example:
+        - file1.pdf
+        - file2.pdf
         items:
           type: string
         type: array
       output_file:
+        example: merged_result.pdf
         type: string
       user_id:
+        type: string
+    type: object
+  model.MergeInput:
+    properties:
+      input_files:
+        example:
+        - file1.pdf
+        - file2.pdf
+        items:
+          type: string
+        type: array
+      output_file:
+        example: merged_result.pdf
+        type: string
+    type: object
+  model.Notification:
+    properties:
+      created_at:
+        type: string
+      file_name:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      is_read:
+        type: boolean
+      message:
+        type: string
+      type:
+        description: merge, compress, convert, summary
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.NotificationRequest:
+    properties:
+      file_name:
+        example: laporan_final.pdf
+        type: string
+      icon:
+        example: check-circle
+        type: string
+      message:
+        example: File PDF berhasil digabungkan
+        type: string
+      type:
+        example: info
+        type: string
+    type: object
+  model.NotificationResponse:
+    properties:
+      message:
+        example: Notifications retrieved successfully
+        type: string
+      notifications:
+        items:
+          $ref: '#/definitions/model.Notification'
+        type: array
+      status:
+        example: 200
+        type: integer
+    type: object
+  model.PaymentInput:
+    properties:
+      amount:
+        example: 50000
+        type: integer
+      name:
+        example: pipo
         type: string
     type: object
   model.PdfmUsers:
@@ -103,19 +267,84 @@ definitions:
       updatedAt:
         type: string
     type: object
+  model.RegisterInput:
+    properties:
+      email:
+        example: example@gmail.com
+        type: string
+      name:
+        example: pipo
+        type: string
+      password:
+        example: rahasia123
+        type: string
+    type: object
   model.SummaryHistory:
     properties:
       created_at:
         type: string
       file_name:
+        example: jurnal.pdf
         type: string
       id:
+        example: 65b...
         type: string
       language:
+        example: id
         type: string
       summary_text:
+        example: Ringkasan dokumen ini adalah...
         type: string
       user_id:
+        type: string
+    type: object
+  model.SummaryInput:
+    properties:
+      file_name:
+        example: jurnal.pdf
+        type: string
+      language:
+        example: id
+        type: string
+      summary_text:
+        example: Ringkasan...
+        type: string
+    type: object
+  model.UnifiedHistoryResponse:
+    properties:
+      history:
+        items:
+          $ref: '#/definitions/model.HistoryItem'
+        type: array
+      message:
+        example: History retrieved successfully
+        type: string
+      status:
+        example: 200
+        type: integer
+    type: object
+  model.UpdateUserInput:
+    properties:
+      email:
+        example: example@gmail.com
+        type: string
+      id:
+        example: 65a...
+        type: string
+      isSupport:
+        example: false
+        type: boolean
+      name:
+        example: pipo
+        type: string
+      password:
+        example: passbaru
+        type: string
+    type: object
+  model.UploadProfilePhotoInput:
+    properties:
+      profilePhoto:
+        example: data:image/png;base64,iVBORw0KGgo...
         type: string
     type: object
 info:
@@ -127,14 +356,12 @@ paths:
       - application/json
       description: Membuat user baru secara langsung (bypass register)
       parameters:
-      - description: User Data
+      - description: Create Payload
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.RegisterInput'
       produces:
       - application/json
       responses:
@@ -151,14 +378,12 @@ paths:
       - application/json
       description: Menghapus user berdasarkan ID
       parameters:
-      - description: 'Payload {id: ...}'
+      - description: Payload Hapus
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.DeleteUserInput'
       produces:
       - application/json
       responses:
@@ -205,14 +430,12 @@ paths:
       - application/json
       description: User mengirim kritik dan saran (Wajib Login)
       parameters:
-      - description: Payload [message (wajib), name, email]
+      - description: Payload Feedback
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.FeedbackInput'
       produces:
       - application/json
       responses:
@@ -314,8 +537,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.UnifiedHistoryResponse'
         "401":
           description: Unauthorized
           schema:
@@ -333,14 +555,12 @@ paths:
       - application/json
       description: Menghapus satu item riwayat berdasarkan ID dan Tipe
       parameters:
-      - description: 'Payload {id: ''...'', type: ''merge/compress/convert/summary''}'
+      - description: Payload Hapus History
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.DeleteHistoryInput'
       produces:
       - application/json
       responses:
@@ -414,8 +634,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.CompressInput'
       produces:
       - application/json
       responses:
@@ -471,8 +690,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.ConvertInput'
       produces:
       - application/json
       responses:
@@ -528,8 +746,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.MergeInput'
       produces:
       - application/json
       responses:
@@ -584,8 +801,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.SummaryInput'
       produces:
       - application/json
       responses:
@@ -612,14 +828,12 @@ paths:
       - application/json
       description: Masuk ke sistem untuk mendapatkan Token Akses
       parameters:
-      - description: Payload [email, password]
+      - description: Payload login
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.LoginInput'
       produces:
       - application/json
       responses:
@@ -684,8 +898,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.NotificationResponse'
         "401":
           description: Unauthorized
           schema:
@@ -701,14 +914,12 @@ paths:
       - application/json
       description: Menambahkan notifikasi baru (biasanya trigger dari sistem)
       parameters:
-      - description: Payload {type, message, icon, file_name}
+      - description: Payload Notifikasi
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.NotificationRequest'
       produces:
       - application/json
       responses:
@@ -751,13 +962,12 @@ paths:
       - application/json
       description: Mengubah status user menjadi Supporter setelah bayar
       parameters:
-      - description: Payload [name, amount]
+      - description: Payload Payment
         in: body
         name: request
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.PaymentInput'
       produces:
       - application/json
       responses:
@@ -793,14 +1003,12 @@ paths:
       - application/json
       description: Mengganti foto profil (Format Base64)
       parameters:
-      - description: 'Payload {profilePhoto: ''base64...''}'
+      - description: Payload Foto Base64
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.UploadProfilePhotoInput'
       produces:
       - application/json
       responses:
@@ -821,14 +1029,12 @@ paths:
       - application/json
       description: User mendaftarkan diri dengan Nama, Email, dan Password
       parameters:
-      - description: Payload [name, email, password]
+      - description: Payload Register
         in: body
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/model.RegisterInput'
       produces:
       - application/json
       responses:
@@ -858,8 +1064,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.UpdateUserInput'
       produces:
       - application/json
       responses:

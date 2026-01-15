@@ -24,7 +24,7 @@ import (
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body model.RegisterInput "Payload Register"
+// @Param request body model.RegisterInput true "Payload Register"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Router /pdfm/register [post]

@@ -30,15 +30,12 @@ const docTemplate = `{
                 "summary": "Tambah User Manual (Admin)",
                 "parameters": [
                     {
-                        "description": "User Data",
+                        "description": "Create Payload",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.RegisterInput"
                         }
                     }
                 ],
@@ -67,15 +64,12 @@ const docTemplate = `{
                 "summary": "Hapus User",
                 "parameters": [
                     {
-                        "description": "Payload {id: ...}",
+                        "description": "Payload Hapus",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.DeleteUserInput"
                         }
                     }
                 ],
@@ -156,15 +150,12 @@ const docTemplate = `{
                 "summary": "Mengirim Feedback (User Login)",
                 "parameters": [
                     {
-                        "description": "Payload [message (wajib), name, email]",
+                        "description": "Payload Feedback",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.FeedbackInput"
                         }
                     }
                 ],
@@ -319,8 +310,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.UnifiedHistoryResponse"
                         }
                     },
                     "401": {
@@ -355,15 +345,12 @@ const docTemplate = `{
                 "summary": "Hapus Riwayat",
                 "parameters": [
                     {
-                        "description": "Payload {id: '...', type: 'merge/compress/convert/summary'}",
+                        "description": "Payload Hapus History",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.DeleteHistoryInput"
                         }
                     }
                 ],
@@ -481,8 +468,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.CompressInput"
                         }
                     }
                 ],
@@ -571,8 +557,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.ConvertInput"
                         }
                     }
                 ],
@@ -661,8 +646,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.MergeInput"
                         }
                     }
                 ],
@@ -749,8 +733,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.SummaryInput"
                         }
                     }
                 ],
@@ -791,15 +774,12 @@ const docTemplate = `{
                 "summary": "Login Pengguna",
                 "parameters": [
                     {
-                        "description": "Payload [email, password]",
+                        "description": "Payload login",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.LoginInput"
                         }
                     }
                 ],
@@ -876,8 +856,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.NotificationResponse"
                         }
                     },
                     "401": {
@@ -908,15 +887,12 @@ const docTemplate = `{
                 "summary": "Buat Notifikasi (System)",
                 "parameters": [
                     {
-                        "description": "Payload {type, message, icon, file_name}",
+                        "description": "Payload Notifikasi",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.NotificationRequest"
                         }
                     }
                 ],
@@ -1009,13 +985,12 @@ const docTemplate = `{
                 "summary": "Konfirmasi Pembayaran",
                 "parameters": [
                     {
-                        "description": "Payload [name, amount]",
+                        "description": "Payload Payment",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.PaymentInput"
                         }
                     }
                 ],
@@ -1079,15 +1054,12 @@ const docTemplate = `{
                 "summary": "Upload Foto Profil",
                 "parameters": [
                     {
-                        "description": "Payload {profilePhoto: 'base64...'}",
+                        "description": "Payload Foto Base64",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.UploadProfilePhotoInput"
                         }
                     }
                 ],
@@ -1119,15 +1091,12 @@ const docTemplate = `{
                 "summary": "Pendaftaran Akun Baru",
                 "parameters": [
                     {
-                        "description": "Payload [name, email, password]",
+                        "description": "Payload Register",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.RegisterInput"
                         }
                     }
                 ],
@@ -1173,8 +1142,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.UpdateUserInput"
                         }
                     }
                 ],
@@ -1194,25 +1162,51 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "compressed_size": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1500000
                 },
                 "created_at": {
                     "type": "string"
                 },
                 "file_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "laporan_besar.pdf"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "65b..."
                 },
                 "original_size": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5000000
                 },
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "success"
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.CompressInput": {
+            "type": "object",
+            "properties": {
+                "compressed_size": {
+                    "type": "integer",
+                    "example": 1500000
+                },
+                "file_name": {
+                    "type": "string",
+                    "example": "laporan_besar.pdf"
+                },
+                "original_size": {
+                    "type": "integer",
+                    "example": 5000000
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },
@@ -1223,19 +1217,63 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "file_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "document.docx"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "65b..."
                 },
                 "source_format": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "docx"
                 },
                 "target_format": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "pdf"
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.ConvertInput": {
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "type": "string",
+                    "example": "document.docx"
+                },
+                "source_format": {
+                    "type": "string",
+                    "example": "docx"
+                },
+                "target_format": {
+                    "type": "string",
+                    "example": "pdf"
+                }
+            }
+        },
+        "model.DeleteHistoryInput": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "65b123..."
+                },
+                "type": {
+                    "description": "merge, compress, convert, summary",
+                    "type": "string",
+                    "example": "merge"
+                }
+            }
+        },
+        "model.DeleteUserInput": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "65a423..."
                 }
             }
         },
@@ -1260,6 +1298,46 @@ const docTemplate = `{
                 "user_id": {
                     "description": "Opsional",
                     "type": "string"
+                }
+            }
+        },
+        "model.FeedbackInput": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "budi@gmail.com"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Aplikasi ini sangat mantap!"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Budi"
+                }
+            }
+        },
+        "model.HistoryItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Merged 2 PDF files"
+                },
+                "details": {},
+                "file_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "merge"
                 }
             }
         },
@@ -1293,6 +1371,19 @@ const docTemplate = `{
                 }
             }
         },
+        "model.LoginInput": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "example@gmail.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "rahasia123"
+                }
+            }
+        },
         "model.MergeHistory": {
             "type": "object",
             "properties": {
@@ -1300,19 +1391,127 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "65b..."
                 },
                 "input_files": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "file1.pdf",
+                        "file2.pdf"
+                    ]
                 },
                 "output_file": {
+                    "type": "string",
+                    "example": "merged_result.pdf"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.MergeInput": {
+            "type": "object",
+            "properties": {
+                "input_files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "file1.pdf",
+                        "file2.pdf"
+                    ]
+                },
+                "output_file": {
+                    "type": "string",
+                    "example": "merged_result.pdf"
+                }
+            }
+        },
+        "model.Notification": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_read": {
+                    "type": "boolean"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "merge, compress, convert, summary",
                     "type": "string"
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.NotificationRequest": {
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "type": "string",
+                    "example": "laporan_final.pdf"
+                },
+                "icon": {
+                    "type": "string",
+                    "example": "check-circle"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "File PDF berhasil digabungkan"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "info"
+                }
+            }
+        },
+        "model.NotificationResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Notifications retrieved successfully"
+                },
+                "notifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Notification"
+                    }
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "model.PaymentInput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 50000
+                },
+                "name": {
+                    "type": "string",
+                    "example": "pipo"
                 }
             }
         },
@@ -1348,6 +1547,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.RegisterInput": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "example@gmail.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "pipo"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "rahasia123"
+                }
+            }
+        },
         "model.SummaryHistory": {
             "type": "object",
             "properties": {
@@ -1355,19 +1571,93 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "file_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "jurnal.pdf"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "65b..."
                 },
                 "language": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "id"
                 },
                 "summary_text": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ringkasan dokumen ini adalah..."
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.SummaryInput": {
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "type": "string",
+                    "example": "jurnal.pdf"
+                },
+                "language": {
+                    "type": "string",
+                    "example": "id"
+                },
+                "summary_text": {
+                    "type": "string",
+                    "example": "Ringkasan..."
+                }
+            }
+        },
+        "model.UnifiedHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.HistoryItem"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "History retrieved successfully"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "model.UpdateUserInput": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "example@gmail.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "65a..."
+                },
+                "isSupport": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "name": {
+                    "type": "string",
+                    "example": "pipo"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "passbaru"
+                }
+            }
+        },
+        "model.UploadProfilePhotoInput": {
+            "type": "object",
+            "properties": {
+                "profilePhoto": {
+                    "type": "string",
+                    "example": "data:image/png;base64,iVBORw0KGgo..."
                 }
             }
         }

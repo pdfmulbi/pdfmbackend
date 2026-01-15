@@ -93,5 +93,5 @@ type FeedbackInput struct {
     Name    string `json:"name" example:"Budi"`
     Email   string `json:"email" example:"budi@gmail.com"`
     Message string `json:"message" example:"Aplikasi ini sangat mantap!"`
-    Rating  int    `json:"rating" example:"5"`
+
 }
