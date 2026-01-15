@@ -21,7 +21,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host asia-southeast2-pdfulbi.cloudfunctions.net
+// @host asia-southeast2-personalsmz.cloudfunctions.net
 // @BasePath /pdfmerger
 // @schemes https
 
