@@ -23,9 +23,9 @@ import (
 // @Accept json
 // @Produce json
 // @Param request body model.FeedbackInput true "Payload Feedback"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
+// @Success 200 {object} model.FeedbackResponse
+// @Failure 400 {object} model.ResponseMessage
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/feedback [post]
 // @Security BearerAuth
 func InsertFeedback(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,8 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 	// 2. Cek siapa yang login (Sama seperti di history.go)
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 		return
 	}
 
@@ -57,13 +58,15 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Decode data dari Frontend
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Data tidak valid", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
 		return
 	}
 
 	// Validasi Pesan
 	if data.Message == "" {
-		http.Error(w, "Pesan tidak boleh kosong", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Pesan tidak boleh kosong"})
 		return
 	}
 
@@ -90,9 +93,9 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 8. Beri respon sukses (Format sama persis dengan history.go)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Terima kasih atas masukan Anda!",
-		"id":      data.ID,
+	json.NewEncoder(w).Encode(model.FeedbackResponse{
+		Message: "Terima kasih atas masukan Anda!",
+		ID:      data.ID,
 	})
 }
 
@@ -107,8 +110,8 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Success 200 {array} model.Feedback
-// @Failure 401 {object} map[string]string
-// @Failure 403 {object} map[string]string
+// @Failure 401 {object} model.ResponseMessage
+// @Failure 403 {object} model.ResponseMessage
 // @Router /pdfm/feedback [get]
 // @Security BearerAuth
 func GetAllFeedback(w http.ResponseWriter, r *http.Request) {
@@ -131,13 +134,15 @@ func GetAllFeedback(w http.ResponseWriter, r *http.Request) {
 	// 2. Cek Admin Authentication
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 		return
 	}
 
 	// 3. Pastikan user adalah admin
 	if !user.IsAdmin {
-		http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Forbidden: Admin access required"})
 		return
 	}
 

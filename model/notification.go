@@ -34,3 +34,8 @@ type NotificationResponse struct {
 }
 
 // Untuk Swagger
+type NotificationActionResponse struct {
+	Status  int    `json:"status" example:"200"`
+	Message string `json:"message" example:"Berhasil"`
+	ID      string `json:"id,omitempty" example:"65b4..."`
+}

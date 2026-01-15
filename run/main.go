@@ -11,16 +11,17 @@ import (
 
 // @title PDF Merger API
 // @version 1.0
-// @description Dokumentasi API untuk Project PDF Merger.
+// @description API untuk mengelola PDF (Merge, Compress, dll)
 // @termsOfService http://swagger.io/terms/
 
-// @contact.name Admin Support
-// @contact.email support@pdfmerger.com
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
 
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host asia-southeast2-personalsmz.cloudfunctions.net
+// @host asia-southeast2-pdfulbi.cloudfunctions.net
 // @BasePath /pdfmerger
 // @schemes https
 

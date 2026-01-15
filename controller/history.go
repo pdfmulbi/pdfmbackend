@@ -25,26 +25,25 @@ import (
 // @Accept json
 // @Produce json
 // @Param request body model.MergeInput true "Payload Data Merge"
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]string
+// @Success 200 {object} model.HistoryActionResponse
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/merge [post]
 // @Security BearerAuth
 func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
-	// 1. Cek siapa yang login
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 		return
 	}
 
-	// 2. Decode Input (Pakai struct Input dari Model)
 	var req model.MergeInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Data tidak valid", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
 		return
 	}
 
-	// 3. Mapping ke Model Database
 	data := model.MergeHistory{
 		ID:         primitive.NewObjectID(),
 		UserID:     user.ID,
@@ -53,18 +52,17 @@ func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:  time.Now(),
 	}
 
-	// 4. Simpan ke database
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "merge_history", data)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan data: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Gagal menyimpan data", http.StatusInternalServerError)
 		return
 	}
 
-	// 5. Beri respon sukses
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Log Merge berhasil disimpan",
-		"id":      data.ID,
+	// PERBAIKAN: Gunakan HistoryActionResponse
+	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+		Message: "Log Merge berhasil disimpan",
+		ID:      data.ID,
 	})
 }
 
@@ -75,13 +73,14 @@ func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Success 200 {array} model.MergeHistory
-// @Failure 401 {object} map[string]string
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/merge [get]
 // @Security BearerAuth
 func GetMergeHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 	data, err := atdb.GetAllDoc[[]model.MergeHistory](config.Mongoconn, "merge_history", bson.M{"user_id": user.ID})
@@ -99,25 +98,26 @@ func GetMergeHistory(w http.ResponseWriter, r *http.Request) {
 
 // CreateCompressHistory godoc
 // @Summary Simpan Log Compress PDF
-// @Description Mencatat riwayat kompresi PDF
 // @Tags History - Compress
 // @Accept json
 // @Produce json
 // @Param request body model.CompressInput true "Payload Data Compress"
-// @Success 200 {object} map[string]string
-// @Failure 401 {object} map[string]string
+// @Success 200 {object} model.HistoryActionResponse
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/compress [post]
 // @Security BearerAuth
 func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 
 	var req model.CompressInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Data tidak valid", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
 		return
 	}
 
@@ -138,23 +138,27 @@ func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Log Compress berhasil disimpan"})
+	// PERBAIKAN: Gunakan HistoryActionResponse (Sekarang Compress juga return ID)
+	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+		Message: "Log Compress berhasil disimpan",
+		ID:      data.ID,
+	})
 }
 
 // GetCompressHistory godoc
 // @Summary Lihat Riwayat Compress
-// @Description Menampilkan daftar riwayat compress user
 // @Tags History - Compress
 // @Accept json
 // @Produce json
 // @Success 200 {array} model.CompressHistory
-// @Failure 401 {object} map[string]string
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/compress [get]
 // @Security BearerAuth
 func GetCompressHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 	data, err := atdb.GetAllDoc[[]model.CompressHistory](config.Mongoconn, "compress_history", bson.M{"user_id": user.ID})
@@ -172,25 +176,26 @@ func GetCompressHistory(w http.ResponseWriter, r *http.Request) {
 
 // CreateConvertHistory godoc
 // @Summary Simpan Log Convert PDF
-// @Description Mencatat riwayat konversi PDF (misal: PDF to Word)
 // @Tags History - Convert
 // @Accept json
 // @Produce json
 // @Param request body model.ConvertInput true "Payload Data Convert"
-// @Success 200 {object} map[string]string
-// @Failure 401 {object} map[string]string
+// @Success 200 {object} model.HistoryActionResponse
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/convert [post]
 // @Security BearerAuth
 func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 
 	var req model.ConvertInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Data tidak valid", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
 		return
 	}
 
@@ -210,23 +215,27 @@ func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Log Convert berhasil disimpan"})
+	// PERBAIKAN: Gunakan HistoryActionResponse
+	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+		Message: "Log Convert berhasil disimpan",
+		ID:      data.ID,
+	})
 }
 
 // GetConvertHistory godoc
 // @Summary Lihat Riwayat Convert
-// @Description Menampilkan daftar riwayat convert user
 // @Tags History - Convert
 // @Accept json
 // @Produce json
 // @Success 200 {array} model.ConvertHistory
-// @Failure 401 {object} map[string]string
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/convert [get]
 // @Security BearerAuth
 func GetConvertHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 	data, err := atdb.GetAllDoc[[]model.ConvertHistory](config.Mongoconn, "convert_history", bson.M{"user_id": user.ID})
@@ -244,25 +253,26 @@ func GetConvertHistory(w http.ResponseWriter, r *http.Request) {
 
 // CreateSummaryHistory godoc
 // @Summary Simpan Log Summary PDF
-// @Description Mencatat riwayat ringkasan (summary) PDF
 // @Tags History - Summary
 // @Accept json
 // @Produce json
 // @Param request body model.SummaryInput true "Payload Data Summary"
-// @Success 200 {object} map[string]string
-// @Failure 401 {object} map[string]string
+// @Success 200 {object} model.HistoryActionResponse
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/summary [post]
 // @Security BearerAuth
 func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 
 	var req model.SummaryInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Data tidak valid", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
 		return
 	}
 
@@ -282,23 +292,27 @@ func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Log Summary berhasil disimpan"})
+	// PERBAIKAN: Gunakan HistoryActionResponse
+	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+		Message: "Log Summary berhasil disimpan",
+		ID:      data.ID,
+	})
 }
 
 // GetSummaryHistory godoc
 // @Summary Lihat Riwayat Summary
-// @Description Menampilkan daftar riwayat summary user
 // @Tags History - Summary
 // @Accept json
 // @Produce json
 // @Success 200 {array} model.SummaryHistory
-// @Failure 401 {object} map[string]string
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/summary [get]
 // @Security BearerAuth
 func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
 		return
 	}
 	data, err := atdb.GetAllDoc[[]model.SummaryHistory](config.Mongoconn, "summary_history", bson.M{"user_id": user.ID})
@@ -311,11 +325,8 @@ func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==========================================
-// 5. UNIFIED HISTORY - SEMUA AKTIVITAS USER
+// 5. UNIFIED HISTORY
 // ==========================================
-
-// PENTING: Struct HistoryItem LOKAL SUDAH DIHAPUS.
-// Kita sekarang pakai `model.HistoryItem` agar sinkron dengan model/history.go
 
 // GetAllHistory godoc
 // @Summary Lihat Semua Riwayat (Gabungan)
@@ -324,7 +335,7 @@ func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} model.UnifiedHistoryResponse
-// @Failure 401 {object} map[string]string
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/history/all [get]
 // @Security BearerAuth
 func GetAllHistory(w http.ResponseWriter, r *http.Request) {
@@ -332,11 +343,11 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 		return
 	}
 
-	// PERBAIKAN: Gunakan struct dari Model, bukan struct lokal
 	var allHistory []model.HistoryItem
 
 	// 1. Ambil Merge History
@@ -409,17 +420,16 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Sort by CreatedAt descending (terbaru diatas)
+	// Sort by CreatedAt descending
 	sort.Slice(allHistory, func(i, j int) bool {
 		return allHistory[i].CreatedAt.After(allHistory[j].CreatedAt)
 	})
 
-	// Return empty array if no history
 	if allHistory == nil {
 		allHistory = []model.HistoryItem{}
 	}
 
-	// PERBAIKAN: Return pakai struct Response, bukan map manual
+	// PERBAIKAN: Gunakan UnifiedHistoryResponse
 	json.NewEncoder(w).Encode(model.UnifiedHistoryResponse{
 		Status:  200,
 		Message: "History retrieved successfully",
@@ -431,8 +441,6 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 // 6. DELETE HISTORY ITEM
 // ==========================================
 
-// PENTING: Struct DeleteHistoryRequest LOKAL SUDAH DIHAPUS.
-
 // DeleteHistory godoc
 // @Summary Hapus Riwayat
 // @Description Menghapus satu item riwayat berdasarkan ID dan Tipe
@@ -440,8 +448,8 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.DeleteHistoryInput true "Payload Hapus History"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
+// @Success 200 {object} model.ResponseMessage
+// @Failure 400 {object} model.ResponseMessage
 // @Router /pdfm/history/delete [delete]
 // @Security BearerAuth
 func DeleteHistory(w http.ResponseWriter, r *http.Request) {
@@ -449,31 +457,31 @@ func DeleteHistory(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromToken(r)
 	if err != nil {
-		http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 		return
 	}
 
-	// PERBAIKAN: Pakai struct dari Model, bukan struct lokal
 	var req model.DeleteHistoryInput
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Invalid request body"})
 		return
 	}
 
-	// Validate required fields
 	if req.ID == "" || req.Type == "" {
-		http.Error(w, "ID and type are required", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "ID and type are required"})
 		return
 	}
 
-	// Convert string ID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(req.ID)
 	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Invalid ID format"})
 		return
 	}
 
-	// Determine collection based on type
 	var collectionName string
 	switch req.Type {
 	case "merge":
@@ -485,34 +493,30 @@ func DeleteHistory(w http.ResponseWriter, r *http.Request) {
 	case "summary":
 		collectionName = "summary_history"
 	default:
-		http.Error(w, "Invalid history type", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Invalid history type"})
 		return
 	}
 
-	// Delete from database (only if belongs to user)
 	filter := bson.M{"_id": objectID, "user_id": user.ID}
 	result, err := config.Mongoconn.Collection(collectionName).DeleteOne(r.Context(), filter)
 	if err != nil {
-		http.Error(w, "Failed to delete: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to delete", http.StatusInternalServerError)
 		return
 	}
 
 	if result.DeletedCount == 0 {
-		http.Error(w, "History item not found or not authorized", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "History item not found or not authorized"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  200,
-		"message": "History deleted successfully",
-	})
+	// PERBAIKAN: Gunakan ResponseMessage
+	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "History deleted successfully"})
 }
 
-// ==========================================
-// HELPER: MENGAMBIL USER DARI TOKEN
-// ==========================================
+// GetUserFromToken (Helper ini harus tetap ada jika belum ada di file lain dalam package yg sama)
 func GetUserFromToken(r *http.Request) (model.PdfmUsers, error) {
-	// ... (Isi fungsi helper ini sama persis dengan yang lama, biarkan saja)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return model.PdfmUsers{}, errors.New("token tidak ditemukan")
@@ -525,7 +529,6 @@ func GetUserFromToken(r *http.Request) (model.PdfmUsers, error) {
 	token := authHeader[len(bearerPrefix):]
 
 	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
-
 	if err != nil {
 		return model.PdfmUsers{}, err
 	}

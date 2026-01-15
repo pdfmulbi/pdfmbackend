@@ -25,7 +25,7 @@ import (
 // @Accept json
 // @Produce json
 // @Success 200 {object} model.NotificationResponse
-// @Failure 401 {object} map[string]interface{}
+// @Failure 401 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications [get]
 // @Security BearerAuth
 func GetNotifications(w http.ResponseWriter, r *http.Request) {
@@ -43,10 +43,8 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 	userID, err := GetUserIDFromToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusUnauthorized,
-			"message": "Unauthorized: " + err.Error(),
-		})
+		// PERBAIKAN: Gunakan struct Response
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized: " + err.Error()})
 		return
 	}
 
@@ -57,20 +55,16 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}).SetLimit(50)
 	cursor, err := collection.Find(context.Background(), bson.M{"user_id": userID}, opts)
 	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to fetch notifications: " + err.Error(),
-		})
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to fetch notifications"})
 		return
 	}
 	defer cursor.Close(context.Background())
 
 	var notifications []model.Notification
 	if err = cursor.All(context.Background(), &notifications); err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to parse notifications: " + err.Error(),
-		})
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to parse notifications"})
 		return
 	}
 
@@ -79,6 +73,7 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 		notifications = []model.Notification{}
 	}
 
+	// Response ini sudah benar pakai struct
 	json.NewEncoder(w).Encode(model.NotificationResponse{
 		Status:        http.StatusOK,
 		Message:       "Notifications retrieved successfully",
@@ -94,8 +89,8 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.NotificationRequest true "Payload Notifikasi"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
+// @Success 201 {object} model.NotificationActionResponse
+// @Failure 400 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications [post]
 // @Security BearerAuth
 func AddNotification(w http.ResponseWriter, r *http.Request) {
@@ -109,39 +104,26 @@ func AddNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
 	userID, err := GetUserIDFromToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusUnauthorized,
-			"message": "Unauthorized: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
 		return
 	}
 
-	// Parse request body
 	var req model.NotificationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusBadRequest,
-			"message": "Invalid request body: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 400, Message: "Invalid request body"})
 		return
 	}
 
-	// Validate required fields
 	if req.Type == "" || req.Message == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusBadRequest,
-			"message": "Type and message are required",
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 400, Message: "Type and message are required"})
 		return
 	}
 
-	// Create notification
 	notification := model.Notification{
 		ID:        primitive.NewObjectID(),
 		UserID:    userID,
@@ -153,23 +135,20 @@ func AddNotification(w http.ResponseWriter, r *http.Request) {
 		FileName:  req.FileName,
 	}
 
-	// Insert into MongoDB
 	collection := GetMongoCollection("notifications")
 	_, err = collection.InsertOne(context.Background(), notification)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to create notification: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to create notification"})
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  http.StatusCreated,
-		"message": "Notification created successfully",
-		"id":      notification.ID.Hex(),
+	// PERBAIKAN: Gunakan NotificationActionResponse
+	json.NewEncoder(w).Encode(model.NotificationActionResponse{
+		Status:  http.StatusCreated,
+		Message: "Notification created successfully",
+		ID:      notification.ID.Hex(),
 	})
 }
 
@@ -180,7 +159,7 @@ func AddNotification(w http.ResponseWriter, r *http.Request) {
 // @Tags Notification
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications/read [put]
 // @Security BearerAuth
 func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
@@ -194,18 +173,13 @@ func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
 	userID, err := GetUserIDFromToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusUnauthorized,
-			"message": "Unauthorized: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
 		return
 	}
 
-	// Update all notifications for this user
 	collection := GetMongoCollection("notifications")
 	_, err = collection.UpdateMany(
 		context.Background(),
@@ -214,16 +188,14 @@ func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to mark as read: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to mark as read"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  http.StatusOK,
-		"message": "All notifications marked as read",
+	// PERBAIKAN: Gunakan NotificationActionResponse
+	json.NewEncoder(w).Encode(model.NotificationActionResponse{
+		Status:  http.StatusOK,
+		Message: "All notifications marked as read",
 	})
 }
 
@@ -234,7 +206,7 @@ func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 // @Tags Notification
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications [delete]
 // @Security BearerAuth
 func ClearNotifications(w http.ResponseWriter, r *http.Request) {
@@ -248,33 +220,25 @@ func ClearNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from token
 	userID, err := GetUserIDFromToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusUnauthorized,
-			"message": "Unauthorized: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
 		return
 	}
 
-	// Delete all notifications for this user
 	collection := GetMongoCollection("notifications")
-	result, err := collection.DeleteMany(context.Background(), bson.M{"user_id": userID})
+	_, err = collection.DeleteMany(context.Background(), bson.M{"user_id": userID})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to clear notifications: " + err.Error(),
-		})
+		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to clear notifications"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  http.StatusOK,
-		"message": "All notifications cleared",
-		"deleted": result.DeletedCount,
+	// PERBAIKAN: Gunakan NotificationActionResponse
+	json.NewEncoder(w).Encode(model.NotificationActionResponse{
+		Status:  http.StatusOK,
+		Message: "All notifications cleared",
 	})
 }
 

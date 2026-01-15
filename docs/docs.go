@@ -75,9 +75,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "User deleted successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -114,19 +114,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -163,26 +157,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.FeedbackResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -316,10 +303,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -358,17 +342,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -412,7 +392,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menampilkan daftar riwayat compress user",
                 "consumes": [
                     "application/json"
                 ],
@@ -436,10 +415,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -450,7 +426,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mencatat riwayat kompresi PDF",
                 "consumes": [
                     "application/json"
                 ],
@@ -476,19 +451,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.HistoryActionResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -501,7 +470,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menampilkan daftar riwayat convert user",
                 "consumes": [
                     "application/json"
                 ],
@@ -525,10 +493,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -539,7 +504,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mencatat riwayat konversi PDF (misal: PDF to Word)",
                 "consumes": [
                     "application/json"
                 ],
@@ -565,19 +529,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.HistoryActionResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -614,10 +572,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -654,17 +609,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.HistoryActionResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -677,7 +628,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menampilkan daftar riwayat summary user",
                 "consumes": [
                     "application/json"
                 ],
@@ -701,10 +651,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -715,7 +662,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mencatat riwayat ringkasan (summary) PDF",
                 "consumes": [
                     "application/json"
                 ],
@@ -741,19 +687,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.HistoryActionResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -787,17 +727,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.LoginResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -825,10 +761,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -862,8 +795,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.NotificationActionResponse"
                         }
                     }
                 }
@@ -900,15 +832,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.NotificationActionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.NotificationActionResponse"
                         }
                     }
                 }
@@ -934,8 +864,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.NotificationActionResponse"
                         }
                     }
                 }
@@ -963,8 +892,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.NotificationActionResponse"
                         }
                     }
                 }
@@ -998,8 +926,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.PaymentResponse"
                         }
                     }
                 }
@@ -1027,10 +954,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ProfilePhotoResponse"
                         }
                     }
                 }
@@ -1067,10 +991,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ProfilePhotoResponse"
                         }
                     }
                 }
@@ -1104,19 +1025,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -1148,9 +1063,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "User updated successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/model.ResponseMessage"
                         }
                     }
                 }
@@ -1318,6 +1233,32 @@ const docTemplate = `{
                 }
             }
         },
+        "model.FeedbackResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "65b..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Terima kasih!"
+                }
+            }
+        },
+        "model.HistoryActionResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "65b4..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Log berhasil disimpan"
+                }
+            }
+        },
         "model.HistoryItem": {
             "type": "object",
             "properties": {
@@ -1381,6 +1322,27 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "rahasia123"
+                }
+            }
+        },
+        "model.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "isAdmin": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Login berhasil"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1Ni..."
+                },
+                "userName": {
+                    "type": "string",
+                    "example": "Pipo"
                 }
             }
         },
@@ -1462,6 +1424,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.NotificationActionResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "65b4..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Berhasil"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
         "model.NotificationRequest": {
             "type": "object",
             "properties": {
@@ -1515,6 +1494,26 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amountPaid": {
+                    "type": "integer",
+                    "example": 50000
+                },
+                "invoiceDate": {
+                    "type": "string"
+                },
+                "invoiceId": {
+                    "type": "string",
+                    "example": "65b..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Pembayaran telah dilakukan, terima kasih!"
+                }
+            }
+        },
         "model.PdfmUsers": {
             "type": "object",
             "properties": {
@@ -1547,6 +1546,19 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ProfilePhotoResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Profile photo updated successfully"
+                },
+                "profilePhoto": {
+                    "type": "string",
+                    "example": "base64string..."
+                }
+            }
+        },
         "model.RegisterInput": {
             "type": "object",
             "properties": {
@@ -1561,6 +1573,15 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "rahasia123"
+                }
+            }
+        },
+        "model.ResponseMessage": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Berhasil"
                 }
             }
         },

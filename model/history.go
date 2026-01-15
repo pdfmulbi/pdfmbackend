@@ -90,3 +90,8 @@ type UnifiedHistoryResponse struct {
 	Message string        `json:"message" example:"History retrieved successfully"`
 	History []HistoryItem `json:"history"`
 }
+
+type HistoryActionResponse struct {
+	Message string             `json:"message" example:"Log berhasil disimpan"`
+	ID      primitive.ObjectID `json:"id,omitempty" example:"65b4..."`
+}

@@ -111,6 +111,24 @@ definitions:
         example: Budi
         type: string
     type: object
+  model.FeedbackResponse:
+    properties:
+      id:
+        example: 65b...
+        type: string
+      message:
+        example: Terima kasih!
+        type: string
+    type: object
+  model.HistoryActionResponse:
+    properties:
+      id:
+        example: 65b4...
+        type: string
+      message:
+        example: Log berhasil disimpan
+        type: string
+    type: object
   model.HistoryItem:
     properties:
       created_at:
@@ -154,6 +172,21 @@ definitions:
         type: string
       password:
         example: rahasia123
+        type: string
+    type: object
+  model.LoginResponse:
+    properties:
+      isAdmin:
+        example: false
+        type: boolean
+      message:
+        example: Login berhasil
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1Ni...
+        type: string
+      userName:
+        example: Pipo
         type: string
     type: object
   model.MergeHistory:
@@ -209,6 +242,18 @@ definitions:
       user_id:
         type: string
     type: object
+  model.NotificationActionResponse:
+    properties:
+      id:
+        example: 65b4...
+        type: string
+      message:
+        example: Berhasil
+        type: string
+      status:
+        example: 200
+        type: integer
+    type: object
   model.NotificationRequest:
     properties:
       file_name:
@@ -246,6 +291,20 @@ definitions:
         example: pipo
         type: string
     type: object
+  model.PaymentResponse:
+    properties:
+      amountPaid:
+        example: 50000
+        type: integer
+      invoiceDate:
+        type: string
+      invoiceId:
+        example: 65b...
+        type: string
+      message:
+        example: Pembayaran telah dilakukan, terima kasih!
+        type: string
+    type: object
   model.PdfmUsers:
     properties:
       createdAt:
@@ -267,6 +326,15 @@ definitions:
       updatedAt:
         type: string
     type: object
+  model.ProfilePhotoResponse:
+    properties:
+      message:
+        example: Profile photo updated successfully
+        type: string
+      profilePhoto:
+        example: base64string...
+        type: string
+    type: object
   model.RegisterInput:
     properties:
       email:
@@ -277,6 +345,12 @@ definitions:
         type: string
       password:
         example: rahasia123
+        type: string
+    type: object
+  model.ResponseMessage:
+    properties:
+      message:
+        example: Berhasil
         type: string
     type: object
   model.SummaryHistory:
@@ -388,9 +462,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: User deleted successfully
+          description: OK
           schema:
-            type: string
+            $ref: '#/definitions/model.ResponseMessage'
       summary: Hapus User
       tags:
       - User Management
@@ -411,15 +485,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Melihat Semua Feedback (Admin Only)
@@ -442,20 +512,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.FeedbackResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Mengirim Feedback (User Login)
@@ -541,9 +606,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Lihat Semua Riwayat (Gabungan)
@@ -567,14 +630,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Hapus Riwayat
@@ -603,7 +663,6 @@ paths:
     get:
       consumes:
       - application/json
-      description: Menampilkan daftar riwayat compress user
       produces:
       - application/json
       responses:
@@ -616,9 +675,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Lihat Riwayat Compress
@@ -627,7 +684,6 @@ paths:
     post:
       consumes:
       - application/json
-      description: Mencatat riwayat kompresi PDF
       parameters:
       - description: Payload Data Compress
         in: body
@@ -641,15 +697,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.HistoryActionResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Simpan Log Compress PDF
@@ -659,7 +711,6 @@ paths:
     get:
       consumes:
       - application/json
-      description: Menampilkan daftar riwayat convert user
       produces:
       - application/json
       responses:
@@ -672,9 +723,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Lihat Riwayat Convert
@@ -683,7 +732,6 @@ paths:
     post:
       consumes:
       - application/json
-      description: 'Mencatat riwayat konversi PDF (misal: PDF to Word)'
       parameters:
       - description: Payload Data Convert
         in: body
@@ -697,15 +745,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.HistoryActionResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Simpan Log Convert PDF
@@ -728,9 +772,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Lihat Riwayat Merge
@@ -753,14 +795,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.HistoryActionResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Simpan Log Merge PDF
@@ -770,7 +809,6 @@ paths:
     get:
       consumes:
       - application/json
-      description: Menampilkan daftar riwayat summary user
       produces:
       - application/json
       responses:
@@ -783,9 +821,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Lihat Riwayat Summary
@@ -794,7 +830,6 @@ paths:
     post:
       consumes:
       - application/json
-      description: Mencatat riwayat ringkasan (summary) PDF
       parameters:
       - description: Payload Data Summary
         in: body
@@ -808,15 +843,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.HistoryActionResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Simpan Log Summary PDF
@@ -840,14 +871,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.LoginResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       summary: Login Pengguna
       tags:
       - Auth
@@ -862,9 +890,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       security:
       - BearerAuth: []
       summary: Keluar Aplikasi (Logout)
@@ -881,8 +907,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.NotificationActionResponse'
       security:
       - BearerAuth: []
       summary: Hapus Semua Notifikasi
@@ -902,8 +927,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.NotificationActionResponse'
       security:
       - BearerAuth: []
       summary: Lihat Notifikasi
@@ -926,13 +950,11 @@ paths:
         "201":
           description: Created
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.NotificationActionResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.NotificationActionResponse'
       security:
       - BearerAuth: []
       summary: Buat Notifikasi (System)
@@ -949,8 +971,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.NotificationActionResponse'
       security:
       - BearerAuth: []
       summary: Tandai Semua Dibaca
@@ -974,8 +995,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.PaymentResponse'
       summary: Konfirmasi Pembayaran
       tags:
       - Payment
@@ -990,9 +1010,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ProfilePhotoResponse'
       security:
       - BearerAuth: []
       summary: Lihat Foto Profil
@@ -1015,9 +1033,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ProfilePhotoResponse'
       security:
       - BearerAuth: []
       summary: Upload Foto Profil
@@ -1041,15 +1057,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ResponseMessage'
       summary: Pendaftaran Akun Baru
       tags:
       - Auth
@@ -1069,9 +1081,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: User updated successfully
+          description: OK
           schema:
-            type: string
+            $ref: '#/definitions/model.ResponseMessage'
       summary: Update Data User
       tags:
       - User Management

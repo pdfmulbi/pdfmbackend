@@ -54,6 +54,7 @@ type Token struct {
 	ExpiresAt time.Time `bson:"expiresAt"`
 }
 
+
 //================================================//
 // 					Untuk SWAGGER 
 //================================================//
@@ -94,4 +95,40 @@ type FeedbackInput struct {
     Email   string `json:"email" example:"budi@gmail.com"`
     Message string `json:"message" example:"Aplikasi ini sangat mantap!"`
 
+}
+
+// ==========================================
+// RESPONSE STRUCTS (Agar Swagger Output Rapi)
+// ==========================================
+
+// ResponseMessage: Untuk response sederhana cuma pesan doang
+type ResponseMessage struct {
+	Message string `json:"message" example:"Berhasil"`
+}
+
+// LoginResponse: Output khusus Login (ada token, nama, dll)
+type LoginResponse struct {
+	Token    string `json:"token" example:"eyJhbGciOiJIUzI1Ni..."`
+	UserName string `json:"userName" example:"Pipo"`
+	IsAdmin  bool   `json:"isAdmin" example:"false"`
+	Message  string `json:"message" example:"Login berhasil"`
+}
+
+type FeedbackResponse struct {
+	Message string             `json:"message" example:"Terima kasih!"`
+	ID      primitive.ObjectID `json:"id" example:"65b..."`
+}
+
+// PaymentResponse: Output setelah bayar
+type PaymentResponse struct {
+	Message     string             `json:"message" example:"Pembayaran telah dilakukan, terima kasih!"`
+	InvoiceId   primitive.ObjectID `json:"invoiceId" example:"65b..."`
+	InvoiceDate time.Time          `json:"invoiceDate"`
+	AmountPaid  int                `json:"amountPaid" example:"50000"`
+}
+
+// ProfilePhotoResponse: Output setelah upload foto
+type ProfilePhotoResponse struct {
+	Message      string `json:"message,omitempty" example:"Profile photo updated successfully"`
+	ProfilePhoto string `json:"profilePhoto,omitempty" example:"base64string..."`
 }

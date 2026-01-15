@@ -23,8 +23,8 @@ import (
 // @Accept json
 // @Produce json
 // @Param request body model.RegisterInput true "Payload Register"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
+// @Success 200 {object} model.ResponseMessage
+// @Failure 400 {object} model.ResponseMessage
 // @Router /pdfm/register [post]
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -67,7 +67,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Registrasi berhasil"})
+	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Registrasi berhasil"})
 }
 
 // GetUser menangani login dan menghasilkan token sederhana
@@ -77,8 +77,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.LoginInput true "Payload login"
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]string
+// @Success 200 {object} model.LoginResponse
+// @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/login [post]
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -131,11 +131,11 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		atdb.InsertOneDoc(config.Mongoconn, "login_logs", loginLog)
 	}()
 
-	response := map[string]interface{}{
-		"token":    token,
-		"userName": user.Name,
-		"isAdmin":  user.IsAdmin,
-		"message":  "Login berhasil",
+	response := model.LoginResponse{
+		Token:    token,
+		UserName: user.Name,
+		IsAdmin:  user.IsAdmin,
+		Message:  "Login berhasil",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -148,7 +148,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]string
+// @Success 200 {object} model.ResponseMessage
 // @Router /pdfm/logout [post]
 // @Security BearerAuth
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +172,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"message": "Logout berhasil"}`))
+	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Logout berhasil"})
 }
 
 // GetUsers godoc
@@ -206,7 +206,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 func GetOneUserAdmin(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	var filter bson.M
-	
+
 	if id != "" {
 		objectID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
@@ -329,7 +329,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.UpdateUserInput true "Update Payload"
-// @Success 200 {string} string "User updated successfully"
+// @Success 200 {object} model.ResponseMessage
 // @Router /pdfm/update/users [put]
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	// PERBAIKAN: Gunakan model.UpdateUserInput
@@ -378,7 +378,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("User updated successfully")
+	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "User updated successfully"})
 }
 
 // DeleteUser godoc
@@ -388,7 +388,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.DeleteUserInput true "Payload Hapus"
-// @Success 200 {string} string "User deleted successfully"
+// @Success 200 {object} model.ResponseMessage
 // @Router /pdfm/delete/users [delete]
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// PERBAIKAN: Gunakan model.DeleteUserInput
@@ -410,7 +410,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("User deleted successfully")
+	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "User deleted successfully"})
 }
 
 // ConfirmPaymentHandler godoc
@@ -420,7 +420,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.PaymentInput true "Payload Payment"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} model.PaymentResponse
 // @Router /pdfm/payment [post]
 func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -486,11 +486,11 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[ConfirmPaymentHandler] Invoice created successfully with ID: %s", insertedID.Hex())
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":     "Pembayaran telah dilakukan, terima kasih!",
-		"invoiceId":   invoice.ID,
-		"invoiceDate": invoice.CreatedAt,
-		"amountPaid":  invoice.Amount,
+	json.NewEncoder(w).Encode(model.PaymentResponse{
+		Message:     "Pembayaran telah dilakukan, terima kasih!",
+		InvoiceId:   invoice.ID,
+		InvoiceDate: invoice.CreatedAt,
+		AmountPaid:  invoice.Amount,
 	})
 }
 
@@ -564,7 +564,7 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body model.UploadProfilePhotoInput true "Payload Foto Base64"
-// @Success 200 {object} map[string]string
+// @Success 200 {object} model.ProfilePhotoResponse
 // @Router /pdfm/profile/photo [post]
 // @Security BearerAuth
 func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
@@ -624,8 +624,8 @@ func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Profile photo updated successfully",
+	json.NewEncoder(w).Encode(model.ProfilePhotoResponse{
+		Message: "Profile photo updated successfully",
 	})
 }
 
@@ -636,7 +636,7 @@ func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags User Profile
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]string
+// @Success 200 {object} model.ProfilePhotoResponse
 // @Router /pdfm/profile/photo [get]
 // @Security BearerAuth
 func GetProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
@@ -671,7 +671,7 @@ func GetProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"profilePhoto": user.ProfilePhoto,
+	json.NewEncoder(w).Encode(model.ProfilePhotoResponse{
+		ProfilePhoto: user.ProfilePhoto,
 	})
 }
