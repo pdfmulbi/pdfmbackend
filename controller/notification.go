@@ -24,7 +24,7 @@ import (
 // @Tags Notification
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} model.NotificationResponse
 // @Failure 401 {object} map[string]interface{}
 // @Router /pdfm/notifications [get]
 // @Security BearerAuth
@@ -93,7 +93,7 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 // @Tags Notification
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Payload {type, message, icon, file_name}"
+// @Param request body model.NotificationRequest true "Payload Notifikasi"
 // @Success 201 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Router /pdfm/notifications [post]

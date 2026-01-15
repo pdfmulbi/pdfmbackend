@@ -22,7 +22,7 @@ import (
 // @Tags Feedback
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Payload [message (wajib), name, email]"
+// @Param request body model.FeedbackInput true "Payload Feedback"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 401 {object} map[string]string

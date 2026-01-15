@@ -20,15 +20,17 @@ type Notification struct {
 
 // NotificationRequest is the request body for creating a notification
 type NotificationRequest struct {
-	Type     string `json:"type"`
-	Message  string `json:"message"`
-	Icon     string `json:"icon"`
-	FileName string `json:"file_name"`
+	Type     string `json:"type" example:"info"`
+	Message  string `json:"message" example:"File PDF berhasil digabungkan"`
+	Icon     string `json:"icon" example:"check-circle"`
+	FileName string `json:"file_name" example:"laporan_final.pdf"`
 }
 
 // NotificationResponse is the response for getting notifications
 type NotificationResponse struct {
-	Status        int            `json:"status"`
-	Message       string         `json:"message"`
+	Status        int            `json:"status" example:"200"`
+	Message       string         `json:"message" example:"Notifications retrieved successfully"`
 	Notifications []Notification `json:"notifications"`
 }
+
+// Untuk Swagger

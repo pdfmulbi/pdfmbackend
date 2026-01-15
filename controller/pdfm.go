@@ -24,7 +24,7 @@ import (
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Payload [name, email, password]"
+// @Param request body model.RegisterInput "Payload Register"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Router /pdfm/register [post]
@@ -86,7 +86,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Payload [email, password]"
+// @Param request body model.LoginInput true "Payload login"
 // @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]string
 // @Router /pdfm/login [post]
@@ -306,7 +306,7 @@ func GetOneUser(respw http.ResponseWriter, req *http.Request) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "User Data"
+// @Param request body model.RegisterInput true "Create Payload"
 // @Success 200 {object} model.PdfmUsers
 // @Router /pdfm/create/users [post]
 func CreateUser(respw http.ResponseWriter, req *http.Request) {
@@ -346,7 +346,7 @@ func CreateUser(respw http.ResponseWriter, req *http.Request) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param request body map[string]interface{} true "Update Payload"
+// @Param request body model.UpdateUserInput true "Update Payload"
 // @Success 200 {string} string "User updated successfully"
 // @Router /pdfm/update/users [put]
 func UpdateUser(respw http.ResponseWriter, req *http.Request) {
@@ -418,7 +418,7 @@ func UpdateUser(respw http.ResponseWriter, req *http.Request) {
 // @Tags User Management
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Payload {id: ...}"
+// @Param request body model.DeleteUserInput true "Payload Hapus"
 // @Success 200 {string} string "User deleted successfully"
 // @Router /pdfm/delete/users [delete]
 func DeleteUser(respw http.ResponseWriter, req *http.Request) {
@@ -455,7 +455,7 @@ func DeleteUser(respw http.ResponseWriter, req *http.Request) {
 // @Tags Payment
 // @Accept json
 // @Produce json
-// @Param request body map[string]interface{} true "Payload [name, amount]"
+// @Param request body model.PaymentInput true "Payload Payment"
 // @Success 200 {object} map[string]interface{}
 // @Router /pdfm/payment [post]
 func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
@@ -658,7 +658,7 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags User Profile
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "Payload {profilePhoto: 'base64...'}"
+// @Param request body model.UploadProfilePhotoInput true "Payload Foto Base64"
 // @Success 200 {object} map[string]string
 // @Router /pdfm/profile/photo [post]
 // @Security BearerAuth

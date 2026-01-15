@@ -53,3 +53,45 @@ type Token struct {
 	Email     string    `bson:"email"`
 	ExpiresAt time.Time `bson:"expiresAt"`
 }
+
+//================================================//
+// 					Untuk SWAGGER 
+//================================================//
+type RegisterInput struct {
+    Name     string `json:"name" example:"pipo"`
+    Email    string `json:"email" example:"example@gmail.com"`
+    Password string `json:"password" example:"rahasia123"`
+}
+
+type LoginInput struct {
+    Email    string `json:"email" example:"example@gmail.com"`
+    Password string `json:"password" example:"rahasia123"`
+}
+
+type PaymentInput struct {
+    Name   string `json:"name" example:"pipo"`
+    Amount int    `json:"amount" example:"50000"`
+}
+
+type UpdateUserInput struct {
+    ID        string `json:"id" example:"65a..."`
+    Name      string `json:"name" example:"pipo"`
+    Email     string `json:"email" example:"example@gmail.com"`
+    Password  string `json:"password" example:"passbaru"`
+    IsSupport bool   `json:"isSupport" example:"false"`
+}
+
+type DeleteUserInput struct {
+    ID string `json:"id" example:"65a423..."`
+}
+
+type UploadProfilePhotoInput struct {
+    ProfilePhoto string `json:"profilePhoto" example:"data:image/png;base64,iVBORw0KGgo..."`
+}
+
+type FeedbackInput struct {
+    Name    string `json:"name" example:"Budi"`
+    Email   string `json:"email" example:"budi@gmail.com"`
+    Message string `json:"message" example:"Aplikasi ini sangat mantap!"`
+    Rating  int    `json:"rating" example:"5"`
+}
