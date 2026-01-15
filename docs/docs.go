@@ -12,8 +12,8 @@ const docTemplate = `{
         "contact": {},
         "version": "{{.Version}}"
     },
-    "host": "{{.Host}}",
-    "basePath": "{{.BasePath}}",
+    "host": "asia-southeast2-personalsmz.cloudfunctions.net",
+    "basePath": "/pdfmerger",
     "paths": {
         "/pdfm/create/users": {
             "post": {
