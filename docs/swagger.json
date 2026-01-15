@@ -1,8 +1,25 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "API untuk mengelola PDF (Merge, Compress, dll)",
+        "title": "PDF Merger API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
     },
+    "host": "asia-southeast2-personalsmz.cloudfunctions.net",
+    "basePath": "/pdfmerger",
+    "schemes": [
+        "https"
+    ],
     "paths": {
         "/pdfm/create/users": {
             "post": {
@@ -415,6 +432,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "Mencatat riwayat kompresi PDF",
                 "consumes": [
                     "application/json"
                 ],
@@ -493,6 +511,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "Mencatat riwayat konversi PDF (misal: PDF to Word)",
                 "consumes": [
                     "application/json"
                 ],
@@ -651,6 +670,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "Mencatat riwayat ringkasan (summary) PDF",
                 "consumes": [
                     "application/json"
                 ],
