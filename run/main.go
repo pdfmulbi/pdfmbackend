@@ -1,12 +1,13 @@
 package main
 
 import (
-	"net/http"
+	"log"
 
 	"github.com/gocroot/route"
+	"github.com/gofiber/fiber/v2"
 
-	httpSwagger "github.com/swaggo/http-swagger"
 	_ "github.com/gocroot/docs"
+	"github.com/gofiber/swagger"
 )
 
 // @title PDF Merger API
@@ -26,7 +27,10 @@ import (
 // @schemes https
 
 func main() {
-	http.HandleFunc("/", route.URL)
-	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
-	http.ListenAndServe(":8080", nil)
+	app := fiber.New()
+
+	app.Get("/swagger/*", swagger.HandlerDefault)
+	route.RegisterRoutes(app)
+
+	log.Fatal(app.Listen(":8080"))
 }

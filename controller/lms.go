@@ -1,33 +1,29 @@
 package controller
 
 import (
-	"net/http"
-
 	"github.com/gocroot/config"
-	"github.com/gocroot/helper/at"
 	"github.com/gocroot/helper/lms"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 )
 
-func GetCountDocUser(w http.ResponseWriter, r *http.Request) {
+func GetCountDocUser(c *fiber.Ctx) error {
 	var resp model.Response
 	rkp, err := lms.GetRekapPendaftaranUsers(config.Mongoconn)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(w, http.StatusConflict, resp)
-		return
+		return c.Status(fiber.StatusConflict).JSON(resp)
 	}
-	at.WriteJSON(w, http.StatusOK, rkp)
+	return c.Status(fiber.StatusOK).JSON(rkp)
 }
 
-func RefreshLMSCookie(respw http.ResponseWriter, req *http.Request) {
+func RefreshLMSCookie(c *fiber.Ctx) error {
 	var resp model.Response
 	err := lms.RefreshCookie(config.Mongoconn)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
 	resp.Info = "ok"
-	at.WriteJSON(respw, http.StatusOK, resp)
+	return c.Status(fiber.StatusOK).JSON(resp)
 }

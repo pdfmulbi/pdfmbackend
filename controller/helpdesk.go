@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
-	"net/http"
 	"strconv"
 
 	"github.com/gocroot/config"
@@ -11,44 +9,40 @@ import (
 	"github.com/gocroot/helper/report"
 	"github.com/gocroot/helper/watoken"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // pindahkan task dari to do ke doing
-func PutTaskUser(w http.ResponseWriter, r *http.Request) {
+func PutTaskUser(c *fiber.Ctx) error {
 	var respn model.Response
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(r))
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(r)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(w, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	var task report.TaskList
-	err = json.NewDecoder(r.Body).Decode(&task)
-	if err != nil {
+	if err := c.BodyParser(&task); err != nil {
 		respn.Status = "Error : Body Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(r)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Body Error"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	taskuser, err := atdb.GetOneDoc[report.TaskList](config.Mongoconn, "tasklist", bson.M{"_id": task.ID})
 	if err != nil {
-		at.WriteJSON(w, http.StatusNotFound, taskuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(taskuser)
 	}
 	insertid, err := atdb.InsertOneDoc(config.Mongoconn, "taskdoing", taskuser)
 	if err != nil {
@@ -56,8 +50,7 @@ func PutTaskUser(w http.ResponseWriter, r *http.Request) {
 		respn.Info = insertid.Hex()
 		respn.Location = "InsertOneDoc"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
 	rest, err := atdb.DeleteOneDoc(config.Mongoconn, "tasklist", bson.M{"_id": task.ID})
 	if err != nil {
@@ -65,48 +58,42 @@ func PutTaskUser(w http.ResponseWriter, r *http.Request) {
 		respn.Info = strconv.FormatInt(rest.DeletedCount, 10)
 		respn.Location = "DeleteOneDoc"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
 	respn.Info = strconv.FormatInt(rest.DeletedCount, 10)
 	respn.Status = insertid.Hex()
-	at.WriteJSON(w, http.StatusOK, respn)
+	return c.Status(fiber.StatusOK).JSON(respn)
 }
 
 // pindahkan task dari doing ke done
-func PostTaskUser(w http.ResponseWriter, r *http.Request) {
+func PostTaskUser(c *fiber.Ctx) error {
 	var respn model.Response
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(r))
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(r)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(w, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	var task report.TaskList
-	err = json.NewDecoder(r.Body).Decode(&task)
-	if err != nil {
+	if err := c.BodyParser(&task); err != nil {
 		respn.Status = "Error : Body Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(r)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Body Error"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	taskuser, err := atdb.GetOneDoc[report.TaskList](config.Mongoconn, "taskdoing", bson.M{"_id": task.ID})
 	if err != nil {
-		at.WriteJSON(w, http.StatusNotFound, taskuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(taskuser)
 	}
 	insertid, err := atdb.InsertOneDoc(config.Mongoconn, "taskdone", taskuser)
 	if err != nil {
@@ -114,8 +101,7 @@ func PostTaskUser(w http.ResponseWriter, r *http.Request) {
 		respn.Info = insertid.Hex()
 		respn.Location = "InsertOneDoc"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
 	rest, err := atdb.DeleteOneDoc(config.Mongoconn, "taskdoing", bson.M{"_id": task.ID})
 	if err != nil {
@@ -123,32 +109,29 @@ func PostTaskUser(w http.ResponseWriter, r *http.Request) {
 		respn.Info = strconv.FormatInt(rest.DeletedCount, 10)
 		respn.Location = "DeleteOneDoc"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
 	respn.Info = strconv.FormatInt(rest.DeletedCount, 10)
 	respn.Status = insertid.Hex()
-	at.WriteJSON(w, http.StatusOK, respn)
+	return c.Status(fiber.StatusOK).JSON(respn)
 }
 
-func GetHelpdeskAll(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetHelpdeskAll(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
 	//melakukan pengambilan data belum terlayani
@@ -177,27 +160,25 @@ func GetHelpdeskAll(respw http.ResponseWriter, req *http.Request) {
 		Done: len(usersudahterlayani),
 		All:  len(usersemua),
 	}
-	at.WriteJSON(respw, http.StatusOK, rekap)
+	return c.Status(fiber.StatusOK).JSON(rekap)
 }
 
-func GetLatestHelpdeskMasuk(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetLatestHelpdeskMasuk(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
 	//melakukan pengambilan data belum terlayani
@@ -209,30 +190,27 @@ func GetLatestHelpdeskMasuk(respw http.ResponseWriter, req *http.Request) {
 	}
 	userbelumterlayani, err := atdb.GetOneLatestDoc[model.Laporan](config.Mongoconn, "helpdeskuser", filterbelumterlayani)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusNotFound, userbelumterlayani)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(userbelumterlayani)
 	}
-	at.WriteJSON(respw, http.StatusOK, userbelumterlayani)
+	return c.Status(fiber.StatusOK).JSON(userbelumterlayani)
 }
 
-func GetLatestHelpdeskSelesai(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetLatestHelpdeskSelesai(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
 	//melakukan pengambilan data sudah terlayani
@@ -244,36 +222,32 @@ func GetLatestHelpdeskSelesai(respw http.ResponseWriter, req *http.Request) {
 	}
 	userbelumterlayani, err := atdb.GetOneLatestDoc[model.Laporan](config.Mongoconn, "helpdeskuser", filtersudahterlayani)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusNotFound, userbelumterlayani)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(userbelumterlayani)
 	}
-	at.WriteJSON(respw, http.StatusOK, userbelumterlayani)
+	return c.Status(fiber.StatusOK).JSON(userbelumterlayani)
 }
 
-func GetTaskDone(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetTaskDone(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
 	taskdoing, err := atdb.GetOneLatestDoc[report.TaskList](config.Mongoconn, "taskdone", bson.M{"phonenumber": docuser.PhoneNumber})
 	if err != nil {
-		at.WriteJSON(respw, http.StatusNotFound, taskdoing)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(taskdoing)
 	}
-	at.WriteJSON(respw, http.StatusOK, taskdoing)
+	return c.Status(fiber.StatusOK).JSON(taskdoing)
 }

@@ -54,47 +54,45 @@ type Token struct {
 	ExpiresAt time.Time `bson:"expiresAt"`
 }
 
-
 //================================================//
-// 					Untuk SWAGGER 
+// 					Untuk SWAGGER
 //================================================//
 type RegisterInput struct {
-    Name     string `json:"name" example:"pipo"`
-    Email    string `json:"email" example:"example@gmail.com"`
-    Password string `json:"password" example:"rahasia123"`
+	Name     string `json:"name" example:"pipo"`
+	Email    string `json:"email" example:"example@gmail.com"`
+	Password string `json:"password" example:"rahasia123"`
 }
 
 type LoginInput struct {
-    Email    string `json:"email" example:"example@gmail.com"`
-    Password string `json:"password" example:"rahasia123"`
+	Email    string `json:"email" example:"example@gmail.com"`
+	Password string `json:"password" example:"rahasia123"`
 }
 
 type PaymentInput struct {
-    Name   string `json:"name" example:"pipo"`
-    Amount int    `json:"amount" example:"50000"`
+	Name   string `json:"name" example:"pipo"`
+	Amount int    `json:"amount" example:"50000"`
 }
 
 type UpdateUserInput struct {
-    ID        string `json:"id" example:"65a..."`
-    Name      string `json:"name" example:"pipo"`
-    Email     string `json:"email" example:"example@gmail.com"`
-    Password  string `json:"password" example:"passbaru"`
-    IsSupport bool   `json:"isSupport" example:"false"`
+	ID        string `json:"id" example:"65a..."`
+	Name      string `json:"name" example:"pipo"`
+	Email     string `json:"email" example:"example@gmail.com"`
+	Password  string `json:"password" example:"passbaru"`
+	IsSupport bool   `json:"isSupport" example:"false"`
 }
 
 type DeleteUserInput struct {
-    ID string `json:"id" example:"65a423..."`
+	ID string `json:"id" example:"65a423..."`
 }
 
 type UploadProfilePhotoInput struct {
-    ProfilePhoto string `json:"profilePhoto" example:"data:image/png;base64,iVBORw0KGgo..."`
+	ProfilePhoto string `json:"profilePhoto" example:"data:image/png;base64,iVBORw0KGgo..."`
 }
 
 type FeedbackInput struct {
-    Name    string `json:"name" example:"Budi"`
-    Email   string `json:"email" example:"budi@gmail.com"`
-    Message string `json:"message" example:"Aplikasi ini sangat mantap!"`
-
+	Name    string `json:"name" example:"Budi"`
+	Email   string `json:"email" example:"budi@gmail.com"`
+	Message string `json:"message" example:"Aplikasi ini sangat mantap!"`
 }
 
 // ==========================================

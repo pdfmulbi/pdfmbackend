@@ -1,20 +1,21 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	// "golang.org/x/crypto/bcrypt"
 )
+
+type UserHandler struct{}
 
 // RegisterHandler menghandle permintaan registrasi.
 // @Summary Pendaftaran Akun Baru
@@ -26,25 +27,16 @@ import (
 // @Success 200 {object} model.ResponseMessage
 // @Failure 400 {object} model.ResponseMessage
 // @Router /pdfm/register [post]
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
-		return
-	}
-
+func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 	// PERBAIKAN: Gunakan model.RegisterInput sesuai Swagger
 	var req model.RegisterInput
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&req)
-	if err != nil {
-		http.Error(w, "Data tidak valid: "+err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Data tidak valid: " + err.Error())
 	}
 
 	// Validasi field wajib
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		http.Error(w, "Name, Email, dan Password wajib diisi", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Name, Email, dan Password wajib diisi")
 	}
 
 	// Mapping ke struct database
@@ -60,14 +52,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Simpan data ke database
-	_, err = atdb.InsertOneDoc(config.Mongoconn, "users", registrationData)
+	_, err := atdb.InsertOneDoc(config.Mongoconn, "users", registrationData)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan data: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data: " + err.Error())
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Registrasi berhasil"})
+	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "Registrasi berhasil"})
 }
 
 // GetUser menangani login dan menghasilkan token sederhana
@@ -80,17 +70,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.LoginResponse
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/login [post]
-func GetUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
-		return
-	}
-
+func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	// PERBAIKAN: Gunakan model.LoginInput sesuai Swagger
 	var req model.LoginInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Data tidak valid: "+err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Data tidak valid: " + err.Error())
 	}
 
 	// Cari pengguna di database
@@ -98,8 +82,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	var user model.PdfmUsers
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
-		http.Error(w, "Email atau password salah", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Email atau password salah")
 	}
 
 	// Buat token unik (UUID)
@@ -113,23 +96,22 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "tokens", tokenData)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan token", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan token")
 	}
 
 	// Autologing background
-	go func() {
+	go func(ip string, ua string) {
 		loginLog := model.LoginLog{
 			ID:        primitive.NewObjectID(),
 			UserID:    user.ID,
 			Name:      user.Name,
 			Email:     user.Email,
-			IPAddress: r.RemoteAddr,
-			UserAgent: r.UserAgent(),
+			IPAddress: ip,
+			UserAgent: ua,
 			LoginAt:   time.Now(),
 		}
 		atdb.InsertOneDoc(config.Mongoconn, "login_logs", loginLog)
-	}()
+	}(c.IP(), string(c.Request().Header.UserAgent()))
 
 	response := model.LoginResponse{
 		Token:    token,
@@ -138,8 +120,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		Message:  "Login berhasil",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 // LogoutHandler godoc
@@ -151,28 +132,24 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.ResponseMessage
 // @Router /pdfm/logout [post]
 // @Security BearerAuth
-func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
+func (h *UserHandler) LogoutHandler(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, "Token tidak ditemukan", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Token tidak ditemukan")
 	}
 
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		http.Error(w, "Format token tidak valid", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Format token tidak valid")
 	}
 	token := authHeader[len(bearerPrefix):]
 
 	_, err := atdb.DeleteOneDoc(config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil {
-		http.Error(w, "Gagal logout", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal logout")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Logout berhasil"})
+	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "Logout berhasil"})
 }
 
 // GetUsers godoc
@@ -183,14 +160,12 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Success 200 {array} model.PdfmUsers
 // @Router /pdfm/get/users [get]
-func GetUsers(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 	users, err := atdb.GetAllDoc[[]model.PdfmUsers](config.Mongoconn, "users", bson.M{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	return c.Status(fiber.StatusOK).JSON(users)
 }
 
 // GetOneUserAdmin godoc
@@ -203,22 +178,20 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 // @Param name query string false "User Name"
 // @Success 200 {object} model.PdfmUsers
 // @Router /pdfm/getoneadmin/users [get]
-func GetOneUserAdmin(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+func (h *UserHandler) GetOneUserAdmin(c *fiber.Ctx) error {
+	id := c.Query("id")
 	var filter bson.M
 
 	if id != "" {
 		objectID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
-			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-			return
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID format")
 		}
 		filter = bson.M{"_id": objectID}
 	} else {
-		name := r.URL.Query().Get("name")
+		name := c.Query("name")
 		if name == "" {
-			http.Error(w, "Missing user identifier", http.StatusBadRequest)
-			return
+			return c.Status(fiber.StatusBadRequest).SendString("Missing user identifier")
 		}
 		filter = bson.M{"name": bson.M{"$regex": name, "$options": "i"}}
 	}
@@ -228,12 +201,10 @@ func GetOneUserAdmin(w http.ResponseWriter, r *http.Request) {
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	return c.Status(fiber.StatusOK).JSON(user)
 }
 
 // GetOneUser godoc
@@ -246,34 +217,29 @@ func GetOneUserAdmin(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} map[string]string
 // @Router /pdfm/getone/users [get]
 // @Security BearerAuth
-func GetOneUser(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
+func (h *UserHandler) GetOneUser(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, "Missing token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Missing token")
 	}
 
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		http.Error(w, "Invalid token format", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid token format")
 	}
 	token := authHeader[len(bearerPrefix):]
 
 	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
-		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid or expired token")
 	}
 
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	return c.Status(fiber.StatusOK).JSON(user)
 }
 
 // CreateUser godoc
@@ -285,12 +251,11 @@ func GetOneUser(w http.ResponseWriter, r *http.Request) {
 // @Param request body model.RegisterInput true "Create Payload"
 // @Success 200 {object} model.PdfmUsers
 // @Router /pdfm/create/users [post]
-func CreateUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	// PERBAIKAN: Gunakan model.RegisterInput
 	var req model.RegisterInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
 	// Mapping ke struct DB
@@ -305,21 +270,17 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	count, err := atdb.GetCountDoc(config.Mongoconn, "users", bson.M{"email": newUser.Email})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 	if count > 0 {
-		http.Error(w, "Email already exists", http.StatusConflict)
-		return
+		return c.Status(fiber.StatusConflict).SendString("Email already exists")
 	}
 
 	if _, err := atdb.InsertOneDoc(config.Mongoconn, "users", newUser); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(newUser)
+	return c.Status(fiber.StatusOK).JSON(newUser)
 }
 
 // UpdateUser godoc
@@ -331,28 +292,24 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 // @Param request body model.UpdateUserInput true "Update Payload"
 // @Success 200 {object} model.ResponseMessage
 // @Router /pdfm/update/users [put]
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	// PERBAIKAN: Gunakan model.UpdateUserInput
 	var req model.UpdateUserInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid request body")
 	}
 
 	if req.ID == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("User ID is required")
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(req.ID)
 	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID format")
 	}
 
 	if req.Name == "" || req.Email == "" {
-		http.Error(w, "Name and Email cannot be empty", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Name and Email cannot be empty")
 	}
 
 	filter := bson.M{"_id": objectID}
@@ -368,17 +325,14 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	result, err := atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, []bson.M{pipeline})
 	if err != nil {
-		http.Error(w, "Failed to update user: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update user: " + err.Error())
 	}
 
 	if result.MatchedCount == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "User updated successfully"})
+	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "User updated successfully"})
 }
 
 // DeleteUser godoc
@@ -390,27 +344,23 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Param request body model.DeleteUserInput true "Payload Hapus"
 // @Success 200 {object} model.ResponseMessage
 // @Router /pdfm/delete/users [delete]
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	// PERBAIKAN: Gunakan model.DeleteUserInput
 	var req model.DeleteUserInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(req.ID)
 	if err != nil {
-		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid user ID format")
 	}
 
 	if _, err := atdb.DeleteOneDoc(config.Mongoconn, "users", bson.M{"_id": objectID}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "User deleted successfully"})
+	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "User deleted successfully"})
 }
 
 // ConfirmPaymentHandler godoc
@@ -422,22 +372,15 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 // @Param request body model.PaymentInput true "Payload Payment"
 // @Success 200 {object} model.PaymentResponse
 // @Router /pdfm/payment [post]
-func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
+func (h *UserHandler) ConfirmPaymentHandler(c *fiber.Ctx) error {
 	// PERBAIKAN: Gunakan model.PaymentInput
 	var req model.PaymentInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid input: " + err.Error())
 	}
 
 	if req.Amount < 1 {
-		http.Error(w, "Minimal donasi adalah Rp1", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Minimal donasi adalah Rp1")
 	}
 
 	filter := bson.M{"name": req.Name}
@@ -445,8 +388,7 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", filter)
 	if err != nil {
 		log.Printf("Error finding user: %v", err)
-		http.Error(w, "User not found: "+err.Error(), http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found: " + err.Error())
 	}
 
 	log.Printf("[ConfirmPaymentHandler] User found: ID=%s, Name=%s, Email='%s'", user.ID.Hex(), user.Name, user.Email)
@@ -461,8 +403,7 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, pipeline)
 	if err != nil {
 		log.Printf("Error updating user: %v", err)
-		http.Error(w, "Failed to update user: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update user: " + err.Error())
 	}
 
 	invoice := model.Invoice{
@@ -479,14 +420,12 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	insertedID, err := atdb.InsertOneDoc(config.Mongoconn, "invoices", invoice)
 	if err != nil {
 		log.Printf("Error creating invoice: %v", err)
-		http.Error(w, "Failed to create invoice: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to create invoice: " + err.Error())
 	}
 
 	log.Printf("[ConfirmPaymentHandler] Invoice created successfully with ID: %s", insertedID.Hex())
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.PaymentResponse{
+	return c.Status(fiber.StatusOK).JSON(model.PaymentResponse{
 		Message:     "Pembayaran telah dilakukan, terima kasih!",
 		InvoiceId:   invoice.ID,
 		InvoiceDate: invoice.CreatedAt,
@@ -503,35 +442,26 @@ func ConfirmPaymentHandler(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {array} model.Invoice
 // @Router /pdfm/invoices [get]
 // @Security BearerAuth
-func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	authHeader := r.Header.Get("Authorization")
+func (h *UserHandler) GetInvoicesHandler(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, "Missing token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Missing token")
 	}
 
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		http.Error(w, "Invalid token format", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid token format")
 	}
 	token := authHeader[len(bearerPrefix):]
 
 	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
-		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid or expired token")
 	}
 
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
 	var filter bson.M
@@ -548,12 +478,10 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 
 	invoices, err := atdb.GetAllDoc[[]model.Invoice](config.Mongoconn, "invoices", filter)
 	if err != nil {
-		http.Error(w, "Oops! We couldn't fetch the invoices.", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Oops! We couldn't fetch the invoices.")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(invoices)
+	return c.Status(fiber.StatusOK).JSON(invoices)
 }
 
 // UploadProfilePhotoHandler handles uploading profile photo (Base64)
@@ -567,41 +495,31 @@ func GetInvoicesHandler(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.ProfilePhotoResponse
 // @Router /pdfm/profile/photo [post]
 // @Security BearerAuth
-func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	authHeader := r.Header.Get("Authorization")
+func (h *UserHandler) UploadProfilePhotoHandler(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, "Missing token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Missing token")
 	}
 
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		http.Error(w, "Invalid token format", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid token format")
 	}
 	token := authHeader[len(bearerPrefix):]
 
 	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
-		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid or expired token")
 	}
 
 	// PERBAIKAN: Gunakan model.UploadProfilePhotoInput
 	var req model.UploadProfilePhotoInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid request body: " + err.Error())
 	}
 
 	if req.ProfilePhoto == "" {
-		http.Error(w, "Profile photo is required", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Profile photo is required")
 	}
 
 	filter := bson.M{"email": tokenData.Email}
@@ -614,17 +532,14 @@ func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 
 	result, err := atdb.UpdateWithPipeline(config.Mongoconn, "users", filter, pipeline)
 	if err != nil {
-		http.Error(w, "Failed to update profile photo: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update profile photo: " + err.Error())
 	}
 
 	if result.MatchedCount == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.ProfilePhotoResponse{
+	return c.Status(fiber.StatusOK).JSON(model.ProfilePhotoResponse{
 		Message: "Profile photo updated successfully",
 	})
 }
@@ -639,39 +554,29 @@ func UploadProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.ProfilePhotoResponse
 // @Router /pdfm/profile/photo [get]
 // @Security BearerAuth
-func GetProfilePhotoHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	authHeader := r.Header.Get("Authorization")
+func (h *UserHandler) GetProfilePhotoHandler(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, "Missing token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Missing token")
 	}
 
 	const bearerPrefix = "Bearer "
 	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-		http.Error(w, "Invalid token format", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid token format")
 	}
 	token := authHeader[len(bearerPrefix):]
 
 	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil || tokenData.ExpiresAt.Before(time.Now()) {
-		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).SendString("Invalid or expired token")
 	}
 
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return c.Status(fiber.StatusNotFound).SendString("User not found")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(model.ProfilePhotoResponse{
+	return c.Status(fiber.StatusOK).JSON(model.ProfilePhotoResponse{
 		ProfilePhoto: user.ProfilePhoto,
 	})
 }

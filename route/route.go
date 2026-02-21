@@ -1,306 +1,209 @@
 package route
 
 import (
-	"net/http"
-	"strings"
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/controller"
-	"github.com/gocroot/helper/at"
 
-	httpSwagger "github.com/swaggo/http-swagger"
 	_ "github.com/gocroot/docs"
 )
 
-func URL(w http.ResponseWriter, r *http.Request) {
-	if config.SetAccessControlHeaders(w, r) {
-		return // If it's a preflight request, return early.
-	}
-	config.SetEnv()
+func RegisterRoutes(app *fiber.App) {
+	app.Use(config.CorsMiddleware())
 
-	var method, path string = r.Method, r.URL.Path
-	switch {
-	
-	case strings.HasPrefix(path, "/swagger/"):
-		httpSwagger.WrapHandler(w, r)
-		return
+	app.Use(func(c *fiber.Ctx) error {
+		config.SetEnv()
+		return c.Next()
+	})
 
-	case method == "GET" && path == "/":
-		controller.GetHome(w, r)
+	feedbackHandler := &controller.FeedbackHandler{}
+	historyHandler := &controller.HistoryHandler{}
+	notifHandler := &controller.NotificationHandler{}
+	userHandler := &controller.UserHandler{}
+
+	app.Get("/swagger/*", func(c *fiber.Ctx) error {
+		// httpSwagger.WrapHandler is for net/http. Needs fiber-swagger.
+		// We'll replace this later with fiber-swagger
+		return c.SendString("Swagger UI")
+	})
+
+	app.Get("/", controller.GetHome)
 
 	//chat bot inbox
-	case method == "POST" && at.URLParam(path, "/webhook/nomor/:nomorwa"):
-		controller.PostInboxNomor(w, r)
+	app.Post("/webhook/nomor/:nomorwa", controller.PostInboxNomor)
 
 	//masking list nmor official
-	case method == "GET" && path == "/data/phone/all":
-		controller.GetBotList(w, r)
+	app.Get("/data/phone/all", controller.GetBotList)
 
 	//akses data helpdesk layanan user
-	case method == "GET" && path == "/data/user/helpdesk/all":
-		controller.GetHelpdeskAll(w, r)
-	case method == "GET" && path == "/data/user/helpdesk/masuk":
-		controller.GetLatestHelpdeskMasuk(w, r)
-	case method == "GET" && path == "/data/user/helpdesk/selesai":
-		controller.GetLatestHelpdeskSelesai(w, r)
+	app.Get("/data/user/helpdesk/all", controller.GetHelpdeskAll)
+	app.Get("/data/user/helpdesk/masuk", controller.GetLatestHelpdeskMasuk)
+	app.Get("/data/user/helpdesk/selesai", controller.GetLatestHelpdeskSelesai)
 
 	//pamong desa data from api
-	case method == "GET" && path == "/data/lms/user":
-		controller.GetDataUserFromApi(w, r)
+	app.Get("/data/lms/user", controller.GetDataUserFromApi)
 
 	//simpan testimoni dari pamong desa lms api
-	case method == "POST" && path == "/data/lms/testi":
-		controller.PostTestimoni(w, r)
+	app.Post("/data/lms/testi", controller.PostTestimoni)
 
-		//get random 4 testi
-	case method == "GET" && path == "/data/lms/random/testi":
-		controller.GetRandomTesti4(w, r)
+	//get random 4 testi
+	app.Get("/data/lms/random/testi", controller.GetRandomTesti4)
 
 	//mendapatkan data sent item
-	case method == "GET" && at.URLParam(path, "/data/peserta/sent/:id"):
-		controller.GetSentItem(w, r)
+	app.Get("/data/peserta/sent/:id", controller.GetSentItem)
 
 	//simpan feedback unsubs user
-	case method == "POST" && path == "/data/peserta/unsubscribe":
-		controller.PostUnsubscribe(w, r)
+	app.Post("/data/peserta/unsubscribe", controller.PostUnsubscribe)
 
 	//generate token linked device
-	case method == "PUT" && path == "/data/user":
-		controller.PutTokenDataUser(w, r)
+	app.Put("/data/user", controller.PutTokenDataUser)
 
 	//Menambhahkan data nomor sender untuk broadcast
-	case method == "PUT" && path == "/data/sender":
-		controller.PutNomorBlast(w, r)
+	app.Put("/data/sender", controller.PutNomorBlast)
 
 	//mendapatkan data list nomor sender untuk broadcast
-	case method == "GET" && path == "/data/sender":
-		controller.GetDataSenders(w, r)
+	app.Get("/data/sender", controller.GetDataSenders)
 
 	//mendapatkan data list nomor sender yang kena blokir dari broadcast
-	case method == "GET" && path == "/data/blokir":
-		controller.GetDataSendersTerblokir(w, r)
+	app.Get("/data/blokir", controller.GetDataSendersTerblokir)
 
 	//mendapatkan data rekap pengiriman wa blast
-	case method == "GET" && path == "/data/rekap":
-		controller.GetRekapBlast(w, r)
+	app.Get("/data/rekap", controller.GetRekapBlast)
 
 	//mendapatkan data faq
-	case method == "GET" && at.URLParam(path, "/data/faq/:id"):
-		controller.GetFAQ(w, r)
+	app.Get("/data/faq/:id", controller.GetFAQ)
 
 	//legacy
-	case method == "PUT" && path == "/data/user/task/doing":
-		controller.PutTaskUser(w, r)
-	case method == "GET" && path == "/data/user/task/done":
-		controller.GetTaskDone(w, r)
-	case method == "POST" && path == "/data/user/task/done":
-		controller.PostTaskUser(w, r)
-	case method == "GET" && path == "/data/pushrepo/kemarin":
-		controller.GetYesterdayDistincWAGroup(w, r)
+	app.Put("/data/user/task/doing", controller.PutTaskUser)
+	app.Get("/data/user/task/done", controller.GetTaskDone)
+	app.Post("/data/user/task/done", controller.PostTaskUser)
+	app.Get("/data/pushrepo/kemarin", controller.GetYesterdayDistincWAGroup)
 
 	//Helpdesk
 	//mendapatkan data tiket
-	case method == "GET" && at.URLParam(path, "/data/tiket/closed/:id"):
-		controller.GetClosedTicket(w, r)
+	app.Get("/data/tiket/closed/:id", controller.GetClosedTicket)
 
 	//simpan feedback tiket user
-	case method == "POST" && path == "/data/tiket/rate":
-		controller.PostMasukanTiket(w, r)
-		// order
-	case method == "POST" && at.URLParam(path, "/data/order/:namalapak"):
-		controller.HandleOrder(w, r)
+	app.Post("/data/tiket/rate", controller.PostMasukanTiket)
+	// order
+	app.Post("/data/order/:namalapak", controller.HandleOrder)
 
 	//user data
-	case method == "GET" && path == "/data/user":
-		controller.GetDataUser(w, r)
+	app.Get("/data/user", controller.GetDataUser)
 
 	//user pendaftaran
-	case method == "POST" && path == "/auth/register/users": //mendapatkan email gmail
-		controller.RegisterGmailAuth(w, r)
-	case method == "POST" && path == "/data/user":
-		controller.PostDataUser(w, r)
-	case method == "POST" && path == "/upload/profpic": //upload gambar profile
-		controller.UploadProfilePictureHandler(w, r)
-	case method == "POST" && path == "/data/user/bio":
-		controller.PostDataBioUser(w, r)
-		/* 	case method == "POST" && at.URLParam(path, "/data/user/wa/:nomorwa"):
-		controller.PostDataUserFromWA(w, r) */
+	app.Post("/auth/register/users", controller.RegisterGmailAuth)
+	app.Post("/data/user", controller.PostDataUser)
+	app.Post("/upload/profpic", controller.UploadProfilePictureHandler)
+	app.Post("/data/user/bio", controller.PostDataBioUser)
 
 	//data proyek
-	case method == "GET" && path == "/data/proyek":
-		controller.GetDataProject(w, r)
-	case method == "GET" && path == "/data/proyek/approved": //akses untuk manager
-		controller.GetEditorApprovedProject(w, r)
-	case method == "POST" && path == "/data/proyek":
-		controller.PostDataProject(w, r)
-	case method == "PUT" && path == "/data/metadatabuku":
-		controller.PutMetaDataProject(w, r)
-	case method == "PUT" && path == "/data/proyek/publishbuku": //publish buku isbn by manager
-		controller.PutPublishProject(w, r)
-	case method == "PUT" && path == "/data/proyek":
-		controller.PutDataProject(w, r)
-	case method == "DELETE" && path == "/data/proyek":
-		controller.DeleteDataProject(w, r)
-	case method == "GET" && path == "/data/proyek/anggota":
-		controller.GetDataMemberProject(w, r)
-	case method == "GET" && path == "/data/proyek/editor":
-		controller.GetDataEditorProject(w, r)
-	case method == "DELETE" && path == "/data/proyek/anggota":
-		controller.DeleteDataMemberProject(w, r)
-	case method == "POST" && path == "/data/proyek/anggota":
-		controller.PostDataMemberProject(w, r)
-	case method == "POST" && path == "/data/proyek/editor": //set editor oleh owner
-		controller.PostDataEditorProject(w, r)
-	case method == "PUT" && path == "/data/proyek/editor": //set approved oleh editor
-		controller.PUtApprovedEditorProject(w, r)
+	app.Get("/data/proyek", controller.GetDataProject)
+	app.Get("/data/proyek/approved", controller.GetEditorApprovedProject)
+	app.Post("/data/proyek", controller.PostDataProject)
+	app.Put("/data/metadatabuku", controller.PutMetaDataProject)
+	app.Put("/data/proyek/publishbuku", controller.PutPublishProject)
+	app.Put("/data/proyek", controller.PutDataProject)
+	app.Delete("/data/proyek", controller.DeleteDataProject)
+	app.Get("/data/proyek/anggota", controller.GetDataMemberProject)
+	app.Get("/data/proyek/editor", controller.GetDataEditorProject)
+	app.Delete("/data/proyek/anggota", controller.DeleteDataMemberProject)
+	app.Post("/data/proyek/anggota", controller.PostDataMemberProject)
+	app.Post("/data/proyek/editor", controller.PostDataEditorProject)
+	app.Put("/data/proyek/editor", controller.PUtApprovedEditorProject)
 
 	//upload cover,draft,pdf,sampul buku project
-	case method == "POST" && at.URLParam(path, "/upload/coverbuku/:projectid"):
-		controller.UploadCoverBukuWithParamFileHandler(w, r)
-	case method == "POST" && at.URLParam(path, "/upload/draftbuku/:projectid"):
-		controller.UploadDraftBukuWithParamFileHandler(w, r)
-	case method == "POST" && at.URLParam(path, "/upload/draftpdfbuku/:projectid"):
-		controller.UploadDraftBukuPDFWithParamFileHandler(w, r)
-	case method == "POST" && at.URLParam(path, "/upload/sampulpdfbuku/:projectid"):
-		controller.UploadSampulBukuPDFWithParamFileHandler(w, r)
-	case method == "POST" && at.URLParam(path, "/upload/spk/:projectid"):
-		controller.UploadSPKPDFWithParamFileHandler(w, r)
-	case method == "POST" && at.URLParam(path, "/upload/spi/:projectid"):
-		controller.UploadSPIPDFWithParamFileHandler(w, r)
-	case method == "GET" && at.URLParam(path, "/download/draft/:path"): //downoad file draft
-		controller.AksesFileRepoDraft(w, r)
-	case method == "POST" && path == "/data/proyek/katalog": //post blog katalog
-		controller.PostKatalogBuku(w, r)
-	case method == "GET" && at.URLParam(path, "/download/dokped/spk/:namaproject"): //base64 namaproject
-		controller.GetFileDraftSPK(w, r)
-	case method == "GET" && at.URLParam(path, "/download/dokped/spkt/:namaproject"): //base64 namaproject
-		controller.GetFileDraftSPKT(w, r)
-	case method == "GET" && at.URLParam(path, "/download/dokped/spi/:path"): //base64 path sampul
-		controller.GetFileDraftSPI(w, r)
+	app.Post("/upload/coverbuku/:projectid", controller.UploadCoverBukuWithParamFileHandler)
+	app.Post("/upload/draftbuku/:projectid", controller.UploadDraftBukuWithParamFileHandler)
+	app.Post("/upload/draftpdfbuku/:projectid", controller.UploadDraftBukuPDFWithParamFileHandler)
+	app.Post("/upload/sampulpdfbuku/:projectid", controller.UploadSampulBukuPDFWithParamFileHandler)
+	app.Post("/upload/spk/:projectid", controller.UploadSPKPDFWithParamFileHandler)
+	app.Post("/upload/spi/:projectid", controller.UploadSPIPDFWithParamFileHandler)
+	app.Get("/download/draft/:path", controller.AksesFileRepoDraft)
+	app.Post("/data/proyek/katalog", controller.PostKatalogBuku)
+	app.Get("/download/dokped/spk/:namaproject", controller.GetFileDraftSPK)
+	app.Get("/download/dokped/spkt/:namaproject", controller.GetFileDraftSPKT)
+	app.Get("/download/dokped/spi/:path", controller.GetFileDraftSPI)
 
-	case method == "POST" && path == "/data/proyek/menu":
-		controller.PostDataMenuProject(w, r)
-	case method == "POST" && path == "/approvebimbingan":
-		controller.ApproveBimbinganbyPoin(w, r)
-	case method == "DELETE" && path == "/data/proyek/menu":
-		controller.DeleteDataMenuProject(w, r)
-	case method == "POST" && path == "/notif/ux/postlaporan":
-		controller.PostLaporan(w, r)
-	case method == "POST" && path == "/notif/ux/postfeedback":
-		controller.PostFeedback(w, r)
+	app.Post("/data/proyek/menu", controller.PostDataMenuProject)
+	app.Post("/approvebimbingan", controller.ApproveBimbinganbyPoin)
+	app.Delete("/data/proyek/menu", controller.DeleteDataMenuProject)
+	app.Post("/notif/ux/postlaporan", controller.PostLaporan)
+	app.Post("/notif/ux/postfeedback", controller.PostFeedback)
 
-	case method == "POST" && path == "/notif/ux/postmeeting":
-		controller.PostMeeting(w, r)
-	case method == "POST" && at.URLParam(path, "/notif/ux/postpresensi/:id"):
-		controller.PostPresensi(w, r)
-	case method == "POST" && at.URLParam(path, "/notif/ux/posttasklists/:id"):
-		controller.PostTaskList(w, r)
-	case method == "POST" && at.URLParam(path, "/webhook/nomor/:nomorwa"):
-		controller.PostInboxNomor(w, r)
+	app.Post("/notif/ux/postmeeting", controller.PostMeeting)
+	app.Post("/notif/ux/postpresensi/:id", controller.PostPresensi)
+	app.Post("/notif/ux/posttasklists/:id", controller.PostTaskList)
+	// Webhook nomor handler - duplicated due to two definitions in old router
+	// app.Post("/webhook/nomor/:nomorwa", controller.PostInboxNomor)
 
 	// LMS
-	case method == "GET" && path == "/lms/refresh/cookie":
-		controller.RefreshLMSCookie(w, r)
-	case method == "GET" && path == "/lms/count/user":
-		controller.GetCountDocUser(w, r)
+	app.Get("/lms/refresh/cookie", controller.RefreshLMSCookie)
+	app.Get("/lms/count/user", controller.GetCountDocUser)
 
 	//PDFM
 	//Profile Photo
-	case method == "POST" && path == "/pdfm/profile/photo":
-		controller.UploadProfilePhotoHandler(w, r)
-	case method == "GET" && path == "/pdfm/profile/photo":
-		controller.GetProfilePhotoHandler(w, r)
+	app.Post("/pdfm/profile/photo", userHandler.UploadProfilePhotoHandler)
+	app.Get("/pdfm/profile/photo", userHandler.GetProfilePhotoHandler)
 
 	//Register
-	case method == "POST" && path == "/pdfm/register":
-		controller.RegisterHandler(w, r)
+	app.Post("/pdfm/register", userHandler.RegisterHandler)
 	//Login
-	case method == "POST" && path == "/pdfm/login":
-		controller.GetUser(w, r)
+	app.Post("/pdfm/login", userHandler.GetUser)
 	//Logout
-	case method == "POST" && path == "/pdfm/logout":
-		controller.LogoutHandler(w, r)
+	app.Post("/pdfm/logout", userHandler.LogoutHandler)
 
 	//PaymentHandler
-	case method == "POST" && path == "/pdfm/payment":
-		controller.ConfirmPaymentHandler(w, r)
+	app.Post("/pdfm/payment", userHandler.ConfirmPaymentHandler)
 
 	//Get InvoiceHandler
-	case method == "GET" && path == "/pdfm/invoices":
-		controller.GetInvoicesHandler(w, r)
+	app.Get("/pdfm/invoices", userHandler.GetInvoicesHandler)
 
 	//CRUD
-	case method == "GET" && path == "/pdfm/get/users":
-		controller.GetUsers(w, r)
-	case method == "POST" && path == "/pdfm/create/users":
-		controller.CreateUser(w, r)
-	case method == "GET" && path == "/pdfm/getone/users":
-		controller.GetOneUser(w, r)
-	case method == "GET" && path == "/pdfm/getoneadmin/users":
-		controller.GetOneUserAdmin(w, r)
-	case method == "PUT" && path == "/pdfm/update/users":
-		controller.UpdateUser(w, r)
-	case method == "DELETE" && path == "/pdfm/delete/users":
-		controller.DeleteUser(w, r)
+	app.Get("/pdfm/get/users", userHandler.GetUsers)
+	app.Post("/pdfm/create/users", userHandler.CreateUser)
+	app.Get("/pdfm/getone/users", userHandler.GetOneUser)
+	app.Get("/pdfm/getoneadmin/users", userHandler.GetOneUserAdmin)
+	app.Put("/pdfm/update/users", userHandler.UpdateUser)
+	app.Delete("/pdfm/delete/users", userHandler.DeleteUser)
 
 	//Notifications
-	case method == "GET" && path == "/pdfm/notifications":
-		controller.GetNotifications(w, r)
-	case method == "POST" && path == "/pdfm/notifications":
-		controller.AddNotification(w, r)
-	case method == "PUT" && path == "/pdfm/notifications/read":
-		controller.MarkAllAsRead(w, r)
-	case method == "DELETE" && path == "/pdfm/notifications":
-		controller.ClearNotifications(w, r)
+	app.Get("/pdfm/notifications", notifHandler.GetNotifications)
+	app.Post("/pdfm/notifications", notifHandler.AddNotification)
+	app.Put("/pdfm/notifications/read", notifHandler.MarkAllAsRead)
+	app.Delete("/pdfm/notifications", notifHandler.ClearNotifications)
 
-		// 1. Merge Logs
-	case method == "POST" && path == "/pdfm/log/merge":
-		controller.CreateMergeHistory(w, r)
-	case method == "GET" && path == "/pdfm/log/merge":
-		controller.GetMergeHistory(w, r)
+	// 1. Merge Logs
+	app.Post("/pdfm/log/merge", historyHandler.CreateMergeHistory)
+	app.Get("/pdfm/log/merge", historyHandler.GetMergeHistory)
 
 	// 2. Compress Logs
-	case method == "POST" && path == "/pdfm/log/compress":
-		controller.CreateCompressHistory(w, r)
-	case method == "GET" && path == "/pdfm/log/compress":
-		controller.GetCompressHistory(w, r)
+	app.Post("/pdfm/log/compress", historyHandler.CreateCompressHistory)
+	app.Get("/pdfm/log/compress", historyHandler.GetCompressHistory)
 
 	// 3. Convert Logs
-	case method == "POST" && path == "/pdfm/log/convert":
-		controller.CreateConvertHistory(w, r)
-	case method == "GET" && path == "/pdfm/log/convert":
-		controller.GetConvertHistory(w, r)
+	app.Post("/pdfm/log/convert", historyHandler.CreateConvertHistory)
+	app.Get("/pdfm/log/convert", historyHandler.GetConvertHistory)
 
 	// 4. Summary Logs
-	case method == "POST" && path == "/pdfm/log/summary":
-		controller.CreateSummaryHistory(w, r)
-	case method == "GET" && path == "/pdfm/log/summary":
-		controller.GetSummaryHistory(w, r)
+	app.Post("/pdfm/log/summary", historyHandler.CreateSummaryHistory)
+	app.Get("/pdfm/log/summary", historyHandler.GetSummaryHistory)
 
 	// 5. All History (Combined)
-	case method == "GET" && path == "/pdfm/history/all":
-		controller.GetAllHistory(w, r)
-	case method == "DELETE" && path == "/pdfm/history/delete":
-		controller.DeleteHistory(w, r)
+	app.Get("/pdfm/history/all", historyHandler.GetAllHistory)
+	app.Delete("/pdfm/history/delete", historyHandler.DeleteHistory)
 
-		// Feedback (Kotak Saran / Contact Us)
-	case method == "POST" && path == "/pdfm/feedback":
-		controller.InsertFeedback(w, r)
-	case method == "GET" && path == "/pdfm/feedback":
-		controller.GetAllFeedback(w, r)
+	// Feedback (Kotak Saran / Contact Us)
+	app.Post("/pdfm/feedback", feedbackHandler.InsertFeedback)
+	app.Get("/pdfm/feedback", feedbackHandler.GetAllFeedback)
 
 	// Google Auth
-	case method == "POST" && path == "/auth/users":
-		controller.Auth(w, r)
-	case method == "POST" && path == "/auth/login":
-		controller.GeneratePasswordHandler(w, r)
-	case method == "POST" && path == "/auth/verify":
-		controller.VerifyPasswordHandler(w, r)
-	case method == "POST" && path == "/auth/resend":
-		controller.ResendPasswordHandler(w, r)
+	app.Post("/auth/users", controller.Auth)
+	app.Post("/auth/login", controller.GeneratePasswordHandler)
+	app.Post("/auth/verify", controller.VerifyPasswordHandler)
+	app.Post("/auth/resend", controller.ResendPasswordHandler)
 
-	// Google Auth
-	default:
-		controller.NotFound(w, r)
-	}
+	// 404 setup equivalent
+	app.Use(controller.NotFound)
 }

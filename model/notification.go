@@ -10,7 +10,7 @@ import (
 type Notification struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	UserID    primitive.ObjectID `bson:"user_id" json:"user_id"`
-	Type      string             `bson:"type" json:"type"`           // merge, compress, convert, summary
+	Type      string             `bson:"type" json:"type"` // merge, compress, convert, summary
 	Message   string             `bson:"message" json:"message"`
 	Icon      string             `bson:"icon" json:"icon"`
 	IsRead    bool               `bson:"is_read" json:"is_read"`

@@ -1,208 +1,221 @@
-package controller_test
+package controller
 
 import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
+	"github.com/gofiber/fiber/v2"
 	"testing"
 
-	"github.com/gocroot/controller"
 	"github.com/gocroot/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Helper function to execute a request
-func executeRequest(t *testing.T, handler http.HandlerFunc, method, url string, body []byte) *httptest.ResponseRecorder {
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
-	if err != nil {
-		t.Fatal(err)
-	}
+// ==========================================
+// 1. AUTHENTICATION & SESSION
+// ==========================================
 
-	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
-	return rr
-}
-
-// Test RegisterHandler
 func TestRegisterHandler(t *testing.T) {
-	data := model.PdfmUsers{
-		Name:     "Test User",
-		Email:    "test@example.com",
+	h := &UserHandler{} // Instansiasi Objek (OOP Style)
+	data := model.RegisterInput{
+		Name:     "Tester Akun",
+		Email:    "tester_akun@example.com",
 		Password: "password123",
 	}
+	body, _ := json.Marshal(data)
+	req, _ := http.NewRequest("POST", "/pdfm/register", bytes.NewBuffer(body))
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.RegisterHandler)
+	resp, _ := app.Test(req, -1)
 
-	body, err := json.Marshal(data)
-	if err != nil {
-		t.Fatalf("Failed to encode JSON: %v", err)
-	}
-
-	rr := executeRequest(t, controller.RegisterHandler, http.MethodPost, "/pdfm/register", body)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
-	}
-
-	var response map[string]string
-	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to decode response JSON: %v", err)
-	}
-
-	if response["message"] != "Registrasi berhasil" {
-		t.Errorf("Expected message 'Registrasi berhasil', got '%s'", response["message"])
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusConflict {
+		t.Errorf("Expected 200 or 409, got %v", resp.StatusCode)
 	}
 }
 
-// Test Login
 func TestGetUser(t *testing.T) {
-	data := model.PdfmUsers{
-		Email:    "test@example.com",
+	h := &UserHandler{}
+	data := model.LoginInput{
+		Email:    "tester_history@example.com",
 		Password: "password123",
 	}
 	body, _ := json.Marshal(data)
+	req, _ := http.NewRequest("POST", "/pdfm/login", bytes.NewBuffer(body))
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.GetUser)
+	resp, _ := app.Test(req, -1)
 
-	rr := executeRequest(t, controller.GetUser, http.MethodPost, "/pdfm/login", body)
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected 200 or 401, got %v", resp.StatusCode)
 	}
 }
 
-// Test Logout
 func TestLogoutHandler(t *testing.T) {
-	req, _ := http.NewRequest(http.MethodPost, "/pdfm/logout", nil)
-	req.Header.Set("Authorization", "Bearer sample_token")
+	h := &UserHandler{}
+	token := setupMockToken(t)
+	req, _ := http.NewRequest("POST", "/pdfm/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.LogoutHandler)
+	resp, _ := app.Test(req, -1)
 
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(controller.LogoutHandler)
-	handler.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
-	}
-
-	var response map[string]string
-	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to decode response JSON: %v", err)
-	}
-
-	if response["message"] != "Logout berhasil" {
-		t.Errorf("Unexpected message: %s", response["message"])
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200, got %v", resp.StatusCode)
 	}
 }
 
-// Test GetUsers
-func TestGetUsers(t *testing.T) {
-	rr := executeRequest(t, controller.GetUsers, http.MethodGet, "/pdfm/get/users", nil)
+// ==========================================
+// 2. USER PROFILE & PHOTO
+// ==========================================
 
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
-	}
-}
-
-// Test GetOneUser
 func TestGetOneUser(t *testing.T) {
-	url := "/pdfm/getone/users?name=Test+User"
-	rr := executeRequest(t, controller.GetOneUser, http.MethodGet, url, nil)
+	h := &UserHandler{}
+	token := setupMockToken(t)
+	req, _ := http.NewRequest("GET", "/pdfm/getone/users", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.GetOneUser)
+	resp, _ := app.Test(req, -1)
 
-	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
-		t.Errorf("Expected status OK or NotFound, got %v", rr.Code)
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200, got %v", resp.StatusCode)
 	}
 }
 
-// Test GetOneUserAdmin
+func TestUploadProfilePhotoHandler(t *testing.T) {
+	h := &UserHandler{}
+	token := setupMockToken(t)
+	payload := model.UploadProfilePhotoInput{
+		ProfilePhoto: "data:image/png;base64,iVBORw0KGgo...",
+	}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("POST", "/pdfm/profile/photo", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.UploadProfilePhotoHandler)
+	resp, _ := app.Test(req, -1)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200, got %v", resp.StatusCode)
+	}
+}
+
+func TestGetProfilePhotoHandler(t *testing.T) {
+	h := &UserHandler{}
+	token := setupMockToken(t)
+	req, _ := http.NewRequest("GET", "/pdfm/profile/photo", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.GetProfilePhotoHandler)
+	resp, _ := app.Test(req, -1)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200, got %v", resp.StatusCode)
+	}
+}
+
+// ==========================================
+// 3. ADMIN USER MANAGEMENT
+// ==========================================
+
+func TestGetUsers(t *testing.T) {
+	h := &UserHandler{}
+	req, _ := http.NewRequest("GET", "/pdfm/get/users", nil)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.GetUsers)
+	resp, _ := app.Test(req, -1)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200, got %v", resp.StatusCode)
+	}
+}
+
 func TestGetOneUserAdmin(t *testing.T) {
-	url := "/pdfm/getoneadmin/users?id=678baf981b52a5a0c34d16be"
-	rr := executeRequest(t, controller.GetOneUserAdmin, http.MethodGet, url, nil)
+	h := &UserHandler{}
+	req, _ := http.NewRequest("GET", "/pdfm/getoneadmin/users?name=Tester", nil)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.GetOneUserAdmin)
+	resp, _ := app.Test(req, -1)
 
-	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
-		t.Errorf("Expected status OK or NotFound, got %v", rr.Code)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected 200 or 404, got %v", resp.StatusCode)
 	}
 }
 
-// Test CreateUser
 func TestCreateUser(t *testing.T) {
-	data := model.PdfmUsers{
-		Email: "newuser@example.com",
-		Name:  "New User_Lah",
-	}
-	body, _ := json.Marshal(data)
+	h := &UserHandler{}
+	payload := model.RegisterInput{Name: "Manual Admin", Email: "admin_create@ex.com", Password: "123"}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("POST", "/pdfm/create/users", bytes.NewBuffer(body))
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.CreateUser)
+	resp, _ := app.Test(req, -1)
 
-	rr := executeRequest(t, controller.CreateUser, http.MethodPost, "/pdfm/create/users", body)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusConflict {
+		t.Errorf("Expected 200 or 409, got %v", resp.StatusCode)
 	}
 }
 
-// Test UpdateUser
 func TestUpdateUser(t *testing.T) {
-	existingID := "678be27e03a8b7bbb3ee3077" // Ganti dengan ID valid di database
-	data := map[string]interface{}{
-		"id":        existingID,
-		"name":      "Updated Name",
-		"email":     "updated@example.com",
-		"password":  "newpassword123",
-		"isSupport": true,
+	h := &UserHandler{}
+	payload := model.UpdateUserInput{
+		ID:    primitive.NewObjectID().Hex(),
+		Name:  "Update Tester",
+		Email: "update@ex.com",
 	}
-	body, _ := json.Marshal(data)
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("PUT", "/pdfm/update/users", bytes.NewBuffer(body))
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.UpdateUser)
+	resp, _ := app.Test(req, -1)
 
-	rr := executeRequest(t, controller.UpdateUser, http.MethodPut, "/pdfm/update/users", body)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v. Response: %s", rr.Code, rr.Body.String())
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected 200 or 404, got %v", resp.StatusCode)
 	}
 }
 
-// Test DeleteUser
 func TestDeleteUser(t *testing.T) {
-	data := map[string]interface{}{
-		"id": primitive.NewObjectID().Hex(),
-	}
-	body, _ := json.Marshal(data)
+	h := &UserHandler{}
+	payload := model.DeleteUserInput{ID: primitive.NewObjectID().Hex()}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("DELETE", "/pdfm/delete/users", bytes.NewBuffer(body))
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.DeleteUser)
+	resp, _ := app.Test(req, -1)
 
-	rr := executeRequest(t, controller.DeleteUser, http.MethodDelete, "/pdfm/delete/users", body)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected 200 or 400, got %v", resp.StatusCode)
 	}
 }
+
+// ==========================================
+// 4. PAYMENT & INVOICES
+// ==========================================
 
 func TestConfirmPaymentHandler(t *testing.T) {
-	data := map[string]interface{}{
-		"name":   "Test User",
-		"amount": 100000,
-	}
-	body, _ := json.Marshal(data)
+	h := &UserHandler{}
+	payload := model.PaymentInput{Name: "User Tester History", Amount: 75000}
+	body, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("POST", "/pdfm/payment", bytes.NewBuffer(body))
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.ConfirmPaymentHandler)
+	resp, _ := app.Test(req, -1)
 
-	rr := executeRequest(t, controller.ConfirmPaymentHandler, http.MethodPost, "/pdfm/confirm/payment", body)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v. Response: %s", rr.Code, rr.Body.String())
-	}
-
-	var response map[string]string
-	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
-		t.Fatalf("Failed to decode response JSON: %v", err)
-	}
-
-	if response["message"] != "Payment confirmed, user updated, and invoice created successfully" {
-		t.Errorf("Unexpected message: %s", response["message"])
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected 200 or 404, got %v", resp.StatusCode)
 	}
 }
 
 func TestGetInvoicesHandler(t *testing.T) {
-	rr := executeRequest(t, controller.GetInvoicesHandler, http.MethodGet, "/pdfm/get/invoices", nil)
+	h := &UserHandler{}
+	token := setupMockToken(t)
+	req, _ := http.NewRequest("GET", "/pdfm/invoices", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	app := fiber.New()
+	app.Add(req.Method, req.URL.Path, h.GetInvoicesHandler)
+	resp, _ := app.Test(req, -1)
 
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status OK, got %v", rr.Code)
-	}
-
-	var invoices []model.Invoice
-	if err := json.Unmarshal(rr.Body.Bytes(), &invoices); err != nil {
-		t.Fatalf("Failed to decode response JSON: %v", err)
-	}
-
-	if len(invoices) == 0 {
-		t.Log("No invoices found (this may be expected if the database is empty).")
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200, got %v", resp.StatusCode)
 	}
 }

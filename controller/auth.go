@@ -14,49 +14,40 @@ import (
 	"github.com/gocroot/helper/auth"
 	"github.com/gocroot/helper/watoken"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func RegisterGmailAuth(w http.ResponseWriter, r *http.Request) {
-	logintoken, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(r))
+func RegisterGmailAuth(c *fiber.Ctx) error {
+	logintoken, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid "
-		respn.Info = at.GetSecretFromHeader(r)
-		respn.Location = "Decode Token Error: " + at.GetLoginFromHeader(r)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
+		respn.Location = "Decode Token Error: " + at.GetLoginFromHeaderFiber(c)
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var request struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request"})
-		return
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"message": "Invalid request"})
 	}
 
 	// Ambil kredensial dari database
 	creds, err := atdb.GetOneDoc[auth.GoogleCredential](config.Mongoconn, "credentials", bson.M{})
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Database Connection Problem: Unable to fetch credentials"})
-		return
+		return c.Status(fiber.StatusBadGateway).JSON(map[string]string{"message": "Database Connection Problem: Unable to fetch credentials"})
 	}
 
 	// Verifikasi ID token menggunakan client_id
 	payload, err := auth.VerifyIDToken(request.Token, creds.ClientID)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid token: Token verification failed"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(map[string]string{"message": "Invalid token: Token verification failed"})
 	}
 
 	userInfo := model.Userdomyikado{
@@ -79,39 +70,27 @@ func RegisterGmailAuth(w http.ResponseWriter, r *http.Request) {
 		// User does not exist or exists but has no phone number, insert into db
 		id, err := atdb.InsertOneDoc(config.Mongoconn, "user", userInfo)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Database Connection Problem: Unable to fetch credentials"})
-			return
+			return c.Status(fiber.StatusBadGateway).JSON(map[string]string{"message": "Database Connection Problem: Unable to fetch credentials"})
 		}
 		response := map[string]interface{}{
 			"message": "User Berhasil Terdaftar",
 			"user":    userInfo,
 			"id":      id.Hex(),
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
-		return
+		return c.Status(fiber.StatusOK).JSON(response)
 	} else if existingUser.PhoneNumber != "" {
 		existingUser.Email = userInfo.Email
 		existingUser.GoogleProfilePicture = userInfo.GoogleProfilePicture
 		_, err := atdb.ReplaceOneDoc(config.Mongoconn, "user", bson.M{"_id": existingUser.ID}, existingUser)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Database Connection Problem: Unable to update user"})
-			return
+			return c.Status(fiber.StatusBadGateway).JSON(map[string]string{"message": "Database Connection Problem: Unable to update user"})
 		}
 		response := map[string]interface{}{
 			"message": "Authenticated successfully",
 			"user":    existingUser,
 			"id":      existingUser.ID,
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
-		return
+		return c.Status(fiber.StatusOK).JSON(response)
 	}
 
 	update := bson.M{
@@ -120,47 +99,33 @@ func RegisterGmailAuth(w http.ResponseWriter, r *http.Request) {
 	opts := options.Update().SetUpsert(true)
 	_, err = collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to save user info: Database update failed"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"message": "Failed to save user info: Database update failed"})
 	}
 
 	response := map[string]interface{}{
 		"user": userInfo,
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
-func Auth(w http.ResponseWriter, r *http.Request) {
+func Auth(c *fiber.Ctx) error {
 	var request struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request"})
-		return
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"message": "Invalid request"})
 	}
 
 	// Ambil kredensial dari database
 	creds, err := atdb.GetOneDoc[auth.GoogleCredential](config.Mongoconn, "credentials", bson.M{})
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Database Connection Problem: Unable to fetch credentials"})
-		return
+		return c.Status(fiber.StatusBadGateway).JSON(map[string]string{"message": "Database Connection Problem: Unable to fetch credentials"})
 	}
 
 	// Verifikasi ID token menggunakan client_id
 	payload, err := auth.VerifyIDToken(request.Token, creds.ClientID)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid token: Token verification failed"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(map[string]string{"message": "Invalid token: Token verification failed"})
 	}
 
 	userInfo := model.Userdomyikado{
@@ -185,27 +150,18 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 			"user":    userInfo,
 			"token":   "",
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(response)
 	} else if existingUser.PhoneNumber != "" {
 		token, err := watoken.EncodeforHours(existingUser.PhoneNumber, existingUser.Name, config.PrivateKey, 18) // Generating a token for 18 hours
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Token generation failed"})
-			return
+			return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"message": "Token generation failed"})
 		}
 		response := map[string]interface{}{
 			"message": "Authenticated successfully",
 			"user":    userInfo,
 			"token":   token,
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
-		return
+		return c.Status(fiber.StatusOK).JSON(response)
 	}
 
 	update := bson.M{
@@ -214,31 +170,25 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 	opts := options.Update().SetUpsert(true)
 	_, err = collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to save user info: Database update failed"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"message": "Failed to save user info: Database update failed"})
 	}
 
 	response := map[string]interface{}{
 		"user": userInfo,
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
-func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
+func GeneratePasswordHandler(c *fiber.Ctx) error {
 	var request struct {
 		PhoneNumber string `json:"phonenumber"`
 		Captcha     string `json:"captcha"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := c.BodyParser(&request); err != nil {
 		var respn model.Response
 		respn.Status = "Invalid Request"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	// Validate CAPTCHA
 	captchaResponse, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", url.Values{
@@ -249,8 +199,7 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to verify captcha"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusServiceUnavailable, respn)
-		return
+		return c.Status(fiber.StatusServiceUnavailable).JSON(respn)
 	}
 	defer captchaResponse.Body.Close()
 
@@ -261,15 +210,13 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to decode captcha response"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 	if !captchaResult.Success {
 		var respn model.Response
 		respn.Status = "Unauthorized"
 		respn.Response = "Invalid captcha"
-		at.WriteJSON(respw, http.StatusUnauthorized, respn)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
 
 	// Validate phone number
@@ -278,8 +225,7 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Bad Request"
 		respn.Response = "Invalid phone number format"
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 
 	// Check if phone number exists in the 'user' collection
@@ -289,8 +235,7 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Unauthorized"
 		respn.Response = "Phone number not registered"
-		at.WriteJSON(respw, http.StatusUnauthorized, respn)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
 
 	// Generate random password
@@ -299,8 +244,7 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to generate password"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 
 	// Hash the password
@@ -309,8 +253,7 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to hash password"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 
 	// Update or insert the user in the database
@@ -330,8 +273,7 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 			var respn model.Response
 			respn.Status = "Failed to insert new user"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusNotModified, respn)
-			return
+			return c.Status(fiber.StatusNotModified).JSON(respn)
 		}
 		responseMessage = "New user created and password generated successfully"
 	} else {
@@ -346,38 +288,36 @@ func GeneratePasswordHandler(respw http.ResponseWriter, r *http.Request) {
 			var respn model.Response
 			respn.Status = "Failed to update user"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusInternalServerError, respn)
-			return
+			return c.Status(fiber.StatusInternalServerError).JSON(respn)
 		}
 		responseMessage = "User info updated and password generated successfully"
 	}
+
+	// Send the random password via WhatsApp
+	auth.SendWhatsAppPasswordFiber(c, request.PhoneNumber, randomPassword)
 
 	// Respond with success and the generated password
 	response := map[string]interface{}{
 		"message":     responseMessage,
 		"phonenumber": request.PhoneNumber,
 	}
-	at.WriteJSON(respw, http.StatusOK, response)
-
-	// Send the random password via WhatsApp
-	auth.SendWhatsAppPassword(respw, request.PhoneNumber, randomPassword)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 var (
 	rl = auth.NewRateLimiter(1, 5) // 1 request per second, burst of 5
 )
 
-func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
+func VerifyPasswordHandler(c *fiber.Ctx) error {
 	var request struct {
 		PhoneNumber string `json:"phonenumber"`
 		Password    string `json:"password"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := c.BodyParser(&request); err != nil {
 		var respn model.Response
 		respn.Status = "Invalid Request"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 
 	// Implementasi rate limiting
@@ -386,8 +326,7 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Too Many Requests"
 		respn.Response = "Please try again later."
-		at.WriteJSON(respw, http.StatusTooManyRequests, respn)
-		return
+		return c.Status(fiber.StatusTooManyRequests).JSON(respn)
 	}
 
 	// Find user in the database
@@ -397,8 +336,7 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to verify password"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusUnauthorized, respn)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
 
 	// Verify password and expiry
@@ -406,8 +344,7 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Unauthorized"
 		respn.Response = "Password Expired"
-		at.WriteJSON(respw, http.StatusUnauthorized, respn)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password))
@@ -415,8 +352,7 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to verify password"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusUnauthorized, respn)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
 
 	// Find user in the 'user' collection
@@ -426,8 +362,7 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Unauthorized"
 		respn.Response = "Phone number not registered"
-		at.WriteJSON(respw, http.StatusUnauthorized, respn)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
 
 	token, err := watoken.EncodeforHours(existingUser.PhoneNumber, existingUser.Name, config.PrivateKey, 18)
@@ -435,8 +370,7 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to give the token"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 
 	response := map[string]interface{}{
@@ -446,19 +380,18 @@ func VerifyPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with success
-	at.WriteJSON(respw, http.StatusOK, response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
-func ResendPasswordHandler(respw http.ResponseWriter, r *http.Request) {
+func ResendPasswordHandler(c *fiber.Ctx) error {
 	var request struct {
 		PhoneNumber string `json:"phonenumber"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := c.BodyParser(&request); err != nil {
 		var respn model.Response
 		respn.Status = "Invalid Request"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 
 	// Generate random password
@@ -467,8 +400,7 @@ func ResendPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to generate password"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 
 	// Hash the password
@@ -477,8 +409,7 @@ func ResendPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to hash password"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 
 	// Check if phone number exists in the 'stp' collection
@@ -497,27 +428,24 @@ func ResendPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 			var respn model.Response
 			respn.Status = "Failed to insert new user"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusInternalServerError, respn)
-			return
+			return c.Status(fiber.StatusInternalServerError).JSON(respn)
 		}
 		responseMessage := "New user created and password generated successfully"
+
+		// Send the random password via WhatsApp
+		auth.SendWhatsAppPasswordFiber(c, request.PhoneNumber, randomPassword)
 
 		// Respond with success and the generated password
 		response := map[string]interface{}{
 			"message":     responseMessage,
 			"phonenumber": request.PhoneNumber,
 		}
-		at.WriteJSON(respw, http.StatusOK, response)
-
-		// Send the random password via WhatsApp
-		auth.SendWhatsAppPassword(respw, request.PhoneNumber, randomPassword)
-		return
+		return c.Status(fiber.StatusOK).JSON(response)
 	} else if stpErr != nil {
 		var respn model.Response
 		respn.Status = "Failed to fetch user info"
 		respn.Response = stpErr.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 
 	// Document found, update the existing one
@@ -531,18 +459,17 @@ func ResendPasswordHandler(respw http.ResponseWriter, r *http.Request) {
 		var respn model.Response
 		respn.Status = "Failed to update user"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusInternalServerError, respn)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(respn)
 	}
 	responseMessage := "User info updated and password generated successfully"
+
+	// Send the random password via WhatsApp
+	auth.SendWhatsAppPasswordFiber(c, request.PhoneNumber, randomPassword)
 
 	// Respond with success and the generated password
 	response := map[string]interface{}{
 		"message":     responseMessage,
 		"phonenumber": request.PhoneNumber,
 	}
-	at.WriteJSON(respw, http.StatusOK, response)
-
-	// Send the random password via WhatsApp
-	auth.SendWhatsAppPassword(respw, request.PhoneNumber, randomPassword)
+	return c.Status(fiber.StatusOK).JSON(response)
 }

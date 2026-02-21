@@ -1,18 +1,19 @@
 package controller
 
 import (
-	"encoding/json"
 	"errors"
-	"net/http"
 	"sort"
 	"time"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+type HistoryHandler struct{}
 
 // ==========================================
 // 1. HANDLER UNTUK MERGE HISTORY
@@ -29,19 +30,15 @@ import (
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/merge [post]
 // @Security BearerAuth
-func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) CreateMergeHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 	}
 
 	var req model.MergeInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
 	}
 
 	data := model.MergeHistory{
@@ -54,13 +51,11 @@ func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
 
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "merge_history", data)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	// PERBAIKAN: Gunakan HistoryActionResponse
-	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Merge berhasil disimpan",
 		ID:      data.ID,
 	})
@@ -76,20 +71,16 @@ func CreateMergeHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/merge [get]
 // @Security BearerAuth
-func GetMergeHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) GetMergeHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 	data, err := atdb.GetAllDoc[[]model.MergeHistory](config.Mongoconn, "merge_history", bson.M{"user_id": user.ID})
 	if err != nil {
-		http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch data")
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	return c.Status(fiber.StatusOK).JSON(data)
 }
 
 // ==========================================
@@ -106,19 +97,15 @@ func GetMergeHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/compress [post]
 // @Security BearerAuth
-func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) CreateCompressHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 
 	var req model.CompressInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
 	}
 
 	data := model.CompressHistory{
@@ -133,13 +120,11 @@ func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
 
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "compress_history", data)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	// PERBAIKAN: Gunakan HistoryActionResponse (Sekarang Compress juga return ID)
-	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Compress berhasil disimpan",
 		ID:      data.ID,
 	})
@@ -154,20 +139,16 @@ func CreateCompressHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/compress [get]
 // @Security BearerAuth
-func GetCompressHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) GetCompressHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 	data, err := atdb.GetAllDoc[[]model.CompressHistory](config.Mongoconn, "compress_history", bson.M{"user_id": user.ID})
 	if err != nil {
-		http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch data")
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	return c.Status(fiber.StatusOK).JSON(data)
 }
 
 // ==========================================
@@ -184,19 +165,15 @@ func GetCompressHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/convert [post]
 // @Security BearerAuth
-func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) CreateConvertHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 
 	var req model.ConvertInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
 	}
 
 	data := model.ConvertHistory{
@@ -210,13 +187,11 @@ func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
 
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "convert_history", data)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	// PERBAIKAN: Gunakan HistoryActionResponse
-	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Convert berhasil disimpan",
 		ID:      data.ID,
 	})
@@ -231,20 +206,16 @@ func CreateConvertHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/convert [get]
 // @Security BearerAuth
-func GetConvertHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) GetConvertHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 	data, err := atdb.GetAllDoc[[]model.ConvertHistory](config.Mongoconn, "convert_history", bson.M{"user_id": user.ID})
 	if err != nil {
-		http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch data")
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	return c.Status(fiber.StatusOK).JSON(data)
 }
 
 // ==========================================
@@ -261,19 +232,15 @@ func GetConvertHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/summary [post]
 // @Security BearerAuth
-func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) CreateSummaryHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 
 	var req model.SummaryInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
 	}
 
 	data := model.SummaryHistory{
@@ -287,13 +254,11 @@ func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
 
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "summary_history", data)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	// PERBAIKAN: Gunakan HistoryActionResponse
-	json.NewEncoder(w).Encode(model.HistoryActionResponse{
+	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Summary berhasil disimpan",
 		ID:      data.ID,
 	})
@@ -308,20 +273,16 @@ func CreateSummaryHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/log/summary [get]
 // @Security BearerAuth
-func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) GetSummaryHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized"})
 	}
 	data, err := atdb.GetAllDoc[[]model.SummaryHistory](config.Mongoconn, "summary_history", bson.M{"user_id": user.ID})
 	if err != nil {
-		http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch data")
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	return c.Status(fiber.StatusOK).JSON(data)
 }
 
 // ==========================================
@@ -338,14 +299,10 @@ func GetSummaryHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/history/all [get]
 // @Security BearerAuth
-func GetAllHistory(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) GetAllHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 	}
 
 	var allHistory []model.HistoryItem
@@ -369,18 +326,18 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 	// 2. Ambil Compress History
 	compressData, err := atdb.GetAllDoc[[]model.CompressHistory](config.Mongoconn, "compress_history", bson.M{"user_id": user.ID})
 	if err == nil && compressData != nil {
-		for _, c := range compressData {
+		for _, cm := range compressData {
 			allHistory = append(allHistory, model.HistoryItem{
-				ID:          c.ID.Hex(),
+				ID:          cm.ID.Hex(),
 				Type:        "compress",
 				Description: "Compressed PDF file",
-				FileName:    c.FileName,
+				FileName:    cm.FileName,
 				Details: map[string]interface{}{
-					"original_size":   c.OriginalSize,
-					"compressed_size": c.CompressedSize,
-					"status":          c.Status,
+					"original_size":   cm.OriginalSize,
+					"compressed_size": cm.CompressedSize,
+					"status":          cm.Status,
 				},
-				CreatedAt: c.CreatedAt,
+				CreatedAt: cm.CreatedAt,
 			})
 		}
 	}
@@ -430,7 +387,7 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// PERBAIKAN: Gunakan UnifiedHistoryResponse
-	json.NewEncoder(w).Encode(model.UnifiedHistoryResponse{
+	return c.Status(fiber.StatusOK).JSON(model.UnifiedHistoryResponse{
 		Status:  200,
 		Message: "History retrieved successfully",
 		History: allHistory,
@@ -452,34 +409,24 @@ func GetAllHistory(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} model.ResponseMessage
 // @Router /pdfm/history/delete [delete]
 // @Security BearerAuth
-func DeleteHistory(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	user, err := GetUserFromToken(r)
+func (h *HistoryHandler) DeleteHistory(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 	}
 
 	var req model.DeleteHistoryInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Invalid request body"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid request body"})
 	}
 
 	if req.ID == "" || req.Type == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "ID and type are required"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "ID and type are required"})
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(req.ID)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Invalid ID format"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid ID format"})
 	}
 
 	var collectionName string
@@ -493,31 +440,26 @@ func DeleteHistory(w http.ResponseWriter, r *http.Request) {
 	case "summary":
 		collectionName = "summary_history"
 	default:
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Invalid history type"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid history type"})
 	}
 
 	filter := bson.M{"_id": objectID, "user_id": user.ID}
-	result, err := config.Mongoconn.Collection(collectionName).DeleteOne(r.Context(), filter)
+	result, err := config.Mongoconn.Collection(collectionName).DeleteOne(c.Context(), filter)
 	if err != nil {
-		http.Error(w, "Failed to delete", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete")
 	}
 
 	if result.DeletedCount == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "History item not found or not authorized"})
-		return
+		return c.Status(fiber.StatusNotFound).JSON(model.ResponseMessage{Message: "History item not found or not authorized"})
 	}
 
 	// PERBAIKAN: Gunakan ResponseMessage
-	json.NewEncoder(w).Encode(model.ResponseMessage{Message: "History deleted successfully"})
+	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "History deleted successfully"})
 }
 
 // GetUserFromToken (Helper ini harus tetap ada jika belum ada di file lain dalam package yg sama)
-func GetUserFromToken(r *http.Request) (model.PdfmUsers, error) {
-	authHeader := r.Header.Get("Authorization")
+func (h *HistoryHandler) GetUserFromToken(c *fiber.Ctx) (model.PdfmUsers, error) {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
 		return model.PdfmUsers{}, errors.New("token tidak ditemukan")
 	}

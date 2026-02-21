@@ -1,11 +1,22 @@
-package gocroot
+package main
 
 import (
-	"github.com/gocroot/route"
+	"log"
 
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/gocroot/route"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
-func init() {
-	functions.HTTP("WebHook", route.URL)
+func main() {
+	app := fiber.New()
+
+	// Logging Middleware
+	app.Use(logger.New())
+
+	// Register Routes
+	route.RegisterRoutes(app)
+
+	// Start Server
+	log.Fatal(app.Listen(":3000"))
 }

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/gocroot/config"
 	"github.com/gocroot/model"
 	"github.com/whatsauth/itmodel"
@@ -25,116 +27,104 @@ import (
 	"github.com/gocroot/helper/whatsauth"
 )
 
-func GetDataUserFromApi(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetDataUserFromApi(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid "
-		respn.Info = at.GetSecretFromHeader(req)
-		respn.Location = "Decode Token Error: " + at.GetLoginFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
+		respn.Location = "Decode Token Error: " + at.GetLoginFromHeaderFiber(c)
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	userdt := lms.GetDataFromAPI(payload.Id)
 	if userdt.Data.Fullname == "" {
-		at.WriteJSON(respw, http.StatusNotFound, userdt)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(userdt)
 	}
-	at.WriteJSON(respw, http.StatusOK, userdt)
+	return c.Status(fiber.StatusOK).JSON(userdt)
 }
 
-func GetDataUser(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetDataUser(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid "
-		respn.Info = at.GetSecretFromHeader(req)
-		respn.Location = "Decode Token Error: " + at.GetLoginFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
+		respn.Location = "Decode Token Error: " + at.GetLoginFromHeaderFiber(c)
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
-	at.WriteJSON(respw, http.StatusOK, docuser)
+	return c.Status(fiber.StatusOK).JSON(docuser)
 }
 
 // melakukan pengecekan apakah suda link device klo ada generate token 5tahun
-func PutTokenDataUser(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func PutTokenDataUser(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid "
-		respn.Info = at.GetSecretFromHeader(req)
-		respn.Location = "Decode Token Error: " + at.GetLoginFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
+		respn.Location = "Decode Token Error: " + at.GetLoginFromHeaderFiber(c)
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
-	hcode, qrstat, err := atapi.Get[model.QRStatus](config.WAAPIGetDevice + at.GetLoginFromHeader(req))
+	hcode, qrstat, err := atapi.Get[model.QRStatus](config.WAAPIGetDevice + at.GetLoginFromHeaderFiber(c))
 	if err != nil {
-		at.WriteJSON(respw, http.StatusMisdirectedRequest, docuser)
-		return
+		return c.Status(fiber.StatusMisdirectedRequest).JSON(docuser)
 	}
 	if hcode == http.StatusOK && !qrstat.Status {
 		docuser.LinkedDevice, err = watoken.EncodeforHours(docuser.PhoneNumber, docuser.Name, config.PrivateKey, 43830)
 		if err != nil {
-			at.WriteJSON(respw, http.StatusFailedDependency, docuser)
-			return
+			return c.Status(fiber.StatusFailedDependency).JSON(docuser)
 		}
 	} else {
 		docuser.LinkedDevice = ""
 	}
 	_, err = atdb.ReplaceOneDoc(config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id}, docuser)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusExpectationFailed, docuser)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(docuser)
 	}
-	at.WriteJSON(respw, http.StatusOK, docuser)
+	return c.Status(fiber.StatusOK).JSON(docuser)
 }
 
-func PostDataUser(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func PostDataUser(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var usr model.Userdomyikado
-	err = json.NewDecoder(req.Body).Decode(&usr)
+	err = c.BodyParser(&usr)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	//pengecekan isian usr
 	if usr.NIK == "" || usr.Pekerjaan == "" || usr.AlamatRumah == "" || usr.AlamatKantor == "" {
 		var respn model.Response
 		respn.Status = "Isian tidak lengkap"
 		respn.Response = "Mohon isi lengkap NIK, Pekerjaan, dan kedua alamat"
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
@@ -145,20 +135,17 @@ func PostDataUser(respw http.ResponseWriter, req *http.Request) {
 			var respn model.Response
 			respn.Status = "Gagal Insert Database"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusNotModified, respn)
-			return
+			return c.Status(fiber.StatusNotModified).JSON(respn)
 		}
 		usr.ID = idusr
-		at.WriteJSON(respw, http.StatusOK, usr)
-		return
+		return c.Status(fiber.StatusOK).JSON(usr)
 	}
 	//jika email belum gsign maka gsign dulu
 	if docuser.Email == "" {
 		var respn model.Response
 		respn.Status = "Email belum terdaftar"
 		respn.Response = "Mohon lakukan google sign in dahulu agar email bisa terdaftar"
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	docuser.NIK = usr.NIK
 	docuser.Pekerjaan = usr.Pekerjaan
@@ -169,19 +156,16 @@ func PostDataUser(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Gagal replaceonedoc"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusConflict, respn)
-		return
+		return c.Status(fiber.StatusConflict).JSON(respn)
 	}
 	//melakukan update di seluruh member project
 	//ambil project yang member sebagai anggota
 	existingprjs, err := atdb.GetAllDoc[[]model.Project](config.Mongoconn, "project", primitive.M{"members._id": docuser.ID})
 	if err != nil { //kalo belum jadi anggota project manapun aman langsung ok
-		at.WriteJSON(respw, http.StatusOK, docuser)
-		return
+		return c.Status(fiber.StatusOK).JSON(docuser)
 	}
 	if len(existingprjs) == 0 { //kalo belum jadi anggota project manapun aman langsung ok
-		at.WriteJSON(respw, http.StatusOK, docuser)
-		return
+		return c.Status(fiber.StatusOK).JSON(docuser)
 	}
 	//loop keanggotaan setiap project dan menggantinya dengan doc yang terupdate
 	for _, prj := range existingprjs {
@@ -191,42 +175,38 @@ func PostDataUser(respw http.ResponseWriter, req *http.Request) {
 			var respn model.Response
 			respn.Status = "Error : Data project tidak di temukan"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusNotFound, respn)
-			return
+			return c.Status(fiber.StatusNotFound).JSON(respn)
 		}
 		_, err = atdb.AddDocToArray[model.Userdomyikado](config.Mongoconn, "project", prj.ID, "members", docuser)
 		if err != nil {
 			var respn model.Response
 			respn.Status = "Error : Gagal menambahkan member ke project"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusExpectationFailed, respn)
-			return
+			return c.Status(fiber.StatusExpectationFailed).JSON(respn)
 		}
 
 	}
 
-	at.WriteJSON(respw, http.StatusOK, docuser)
+	return c.Status(fiber.StatusOK).JSON(docuser)
 }
 
-func PostDataBioUser(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func PostDataBioUser(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var usr model.Userdomyikado
-	err = json.NewDecoder(req.Body).Decode(&usr)
+	err = c.BodyParser(&usr)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
@@ -237,20 +217,17 @@ func PostDataBioUser(respw http.ResponseWriter, req *http.Request) {
 			var respn model.Response
 			respn.Status = "Gagal Insert Database"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusNotModified, respn)
-			return
+			return c.Status(fiber.StatusNotModified).JSON(respn)
 		}
 		usr.ID = idusr
-		at.WriteJSON(respw, http.StatusOK, usr)
-		return
+		return c.Status(fiber.StatusOK).JSON(usr)
 	}
 	//check profpic apakah kosong  atau engga
 	if docuser.ProfilePicture == "" {
 		var respn model.Response
 		respn.Status = "Belum ada Profile Picture"
 		respn.Response = "Mohon upload dahulu profile picture anda pada form yang disediakan"
-		at.WriteJSON(respw, http.StatusConflict, respn)
-		return
+		return c.Status(fiber.StatusConflict).JSON(respn)
 	}
 
 	//publish ke blog
@@ -261,8 +238,7 @@ func PostDataBioUser(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Gagal post ke blogger"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusConflict, respn)
-		return
+		return c.Status(fiber.StatusConflict).JSON(respn)
 	}
 	//update data content
 	docuser.URLBio = bpost.Id
@@ -274,19 +250,16 @@ func PostDataBioUser(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Gagal replaceonedoc"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusConflict, respn)
-		return
+		return c.Status(fiber.StatusConflict).JSON(respn)
 	}
 	//melakukan update di seluruh member project
 	//ambil project yang member sebagai anggota
 	existingprjs, err := atdb.GetAllDoc[[]model.Project](config.Mongoconn, "project", primitive.M{"members._id": docuser.ID})
 	if err != nil { //kalo belum jadi anggota project manapun aman langsung ok
-		at.WriteJSON(respw, http.StatusOK, docuser)
-		return
+		return c.Status(fiber.StatusOK).JSON(docuser)
 	}
 	if len(existingprjs) == 0 { //kalo belum jadi anggota project manapun aman langsung ok
-		at.WriteJSON(respw, http.StatusOK, docuser)
-		return
+		return c.Status(fiber.StatusOK).JSON(docuser)
 	}
 	//loop keanggotaan setiap project dan menggantinya dengan doc yang terupdate
 	for _, prj := range existingprjs {
@@ -296,43 +269,38 @@ func PostDataBioUser(respw http.ResponseWriter, req *http.Request) {
 			var respn model.Response
 			respn.Status = "Error : Data project tidak di temukan"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusNotFound, respn)
-			return
+			return c.Status(fiber.StatusNotFound).JSON(respn)
 		}
 		_, err = atdb.AddDocToArray[model.Userdomyikado](config.Mongoconn, "project", prj.ID, "members", docuser)
 		if err != nil {
 			var respn model.Response
 			respn.Status = "Error : Gagal menambahkan member ke project"
 			respn.Response = err.Error()
-			at.WriteJSON(respw, http.StatusExpectationFailed, respn)
-			return
+			return c.Status(fiber.StatusExpectationFailed).JSON(respn)
 		}
 
 	}
 
-	at.WriteJSON(respw, http.StatusOK, docuser)
+	return c.Status(fiber.StatusOK).JSON(docuser)
 }
 
-func PostDataUserFromWA(respw http.ResponseWriter, req *http.Request) {
+func PostDataUserFromWA(c *fiber.Ctx) error {
 	var resp itmodel.Response
-	prof, err := whatsauth.GetAppProfile(at.GetParam(req), config.Mongoconn)
+	prof, err := whatsauth.GetAppProfile(c.Query("url"), config.Mongoconn)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
-	if at.GetSecretFromHeader(req) != prof.Secret {
-		resp.Response = "Salah secret: " + at.GetSecretFromHeader(req)
-		at.WriteJSON(respw, http.StatusUnauthorized, resp)
-		return
+	if at.GetSecretFromHeaderFiber(c) != prof.Secret {
+		resp.Response = "Salah secret: " + at.GetSecretFromHeaderFiber(c)
+		return c.Status(fiber.StatusUnauthorized).JSON(resp)
 	}
 	var usr model.Userdomyikado
-	err = json.NewDecoder(req.Body).Decode(&usr)
+	err = c.BodyParser(&usr)
 	if err != nil {
 		resp.Response = "Error : Body tidak valid"
 		resp.Info = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": usr.PhoneNumber})
 	if err != nil {
@@ -340,12 +308,10 @@ func PostDataUserFromWA(respw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			resp.Response = "Gagal Insert Database"
 			resp.Info = err.Error()
-			at.WriteJSON(respw, http.StatusNotModified, resp)
-			return
+			return c.Status(fiber.StatusNotModified).JSON(resp)
 		}
 		resp.Info = idusr.Hex()
-		at.WriteJSON(respw, http.StatusOK, resp)
-		return
+		return c.Status(fiber.StatusOK).JSON(resp)
 	}
 	docuser.Name = usr.Name
 	docuser.Email = usr.Email
@@ -353,21 +319,18 @@ func PostDataUserFromWA(respw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		resp.Response = "Gagal replaceonedoc"
 		resp.Info = err.Error()
-		at.WriteJSON(respw, http.StatusConflict, resp)
-		return
+		return c.Status(fiber.StatusConflict).JSON(resp)
 	}
 	//melakukan update di seluruh member project
 	//ambil project yang member sebagai anggota
 	existingprjs, err := atdb.GetAllDoc[[]model.Project](config.Mongoconn, "project", primitive.M{"members._id": docuser.ID})
 	if err != nil { //kalo belum jadi anggota project manapun aman langsung ok
 		resp.Response = "belum terdaftar di project manapun"
-		at.WriteJSON(respw, http.StatusOK, resp)
-		return
+		return c.Status(fiber.StatusOK).JSON(resp)
 	}
 	if len(existingprjs) == 0 { //kalo belum jadi anggota project manapun aman langsung ok
 		resp.Response = "belum terdaftar di project manapun"
-		at.WriteJSON(respw, http.StatusOK, resp)
-		return
+		return c.Status(fiber.StatusOK).JSON(resp)
 	}
 	//loop keanggotaan setiap project dan menggantinya dengan doc yang terupdate
 	for _, prj := range existingprjs {
@@ -376,46 +339,41 @@ func PostDataUserFromWA(respw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			resp.Response = "Error : Data project tidak di temukan"
 			resp.Info = err.Error()
-			at.WriteJSON(respw, http.StatusNotFound, resp)
-			return
+			return c.Status(fiber.StatusNotFound).JSON(resp)
 		}
 		_, err = atdb.AddDocToArray[model.Userdomyikado](config.Mongoconn, "project", prj.ID, "members", docuser)
 		if err != nil {
 			resp.Response = "Error : Gagal menambahkan member ke project"
 			resp.Info = err.Error()
-			at.WriteJSON(respw, http.StatusExpectationFailed, resp)
-			return
+			return c.Status(fiber.StatusExpectationFailed).JSON(resp)
 		}
 
 	}
 	resp.Info = docuser.ID.Hex()
-	resp.Info = docuser.Email
-	at.WriteJSON(respw, http.StatusOK, resp)
+	resp.Response = docuser.Email
+	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func ApproveBimbinganbyPoin(w http.ResponseWriter, r *http.Request) {
-	noHp := r.Header.Get("nohp")
+func ApproveBimbinganbyPoin(c *fiber.Ctx) error {
+	noHp := c.Get("nohp")
 	if noHp == "" {
-		http.Error(w, "No valid phone number found", http.StatusForbidden)
-		return
+		return c.Status(fiber.StatusForbidden).SendString("No valid phone number found")
 	}
 
 	var requestData struct {
 		NIM   string `json:"nim"`
 		Topik string `json:"topik"`
 	}
-	err := json.NewDecoder(r.Body).Decode(&requestData)
+	err := c.BodyParser(&requestData)
 	if err != nil || requestData.NIM == "" || requestData.Topik == "" {
-		http.Error(w, "Invalid request body or NIM/Topik not provided", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid request body or NIM/Topik not provided")
 	}
 
 	// Get the API URL from the database
 	var conf model.Config
 	err = config.Mongoconn.Collection("config").FindOne(context.TODO(), bson.M{"phonenumber": "62895601060000"}).Decode(&conf)
 	if err != nil {
-		http.Error(w, "Mohon maaf ada kesalahan dalam pengambilan config di database: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Mohon maaf ada kesalahan dalam pengambilan config di database: " + err.Error())
 	}
 
 	// Prepare the request body
@@ -424,59 +382,52 @@ func ApproveBimbinganbyPoin(w http.ResponseWriter, r *http.Request) {
 		"topik": requestData.Topik,
 	})
 	if err != nil {
-		http.Error(w, "Gagal membuat request body: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal membuat request body: " + err.Error())
 	}
 
 	// Create and send the HTTP request
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("POST", conf.ApproveBimbinganURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		http.Error(w, "Gagal membuat request: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal membuat request: " + err.Error())
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("nohp", noHp)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		http.Error(w, "Gagal mengirim request: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal mengirim request: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		switch resp.StatusCode {
 		case http.StatusNotFound:
-			http.Error(w, "Token tidak ditemukan! Silahkan Login Kembali", http.StatusNotFound)
+			return c.Status(fiber.StatusNotFound).SendString("Token tidak ditemukan! Silahkan Login Kembali")
 		case http.StatusForbidden:
-			http.Error(w, "Gagal, Bimbingan telah disetujui!", http.StatusForbidden)
+			return c.Status(fiber.StatusForbidden).SendString("Gagal, Bimbingan telah disetujui!")
 		default:
-			http.Error(w, fmt.Sprintf("Gagal approve bimbingan, status code: %d", resp.StatusCode), http.StatusInternalServerError)
+			return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("Gagal approve bimbingan, status code: %d", resp.StatusCode))
 		}
-		return
 	}
 
 	var responseMap map[string]string
 	err = json.NewDecoder(resp.Body).Decode(&responseMap)
 	if err != nil {
-		http.Error(w, "Gagal memproses response: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal memproses response: " + err.Error())
 	}
 
 	// Kurangi poin berdasarkan nomor telepon yang ada di response
 	phonenumber := responseMap["no_hp"]
 	_, err = report.KurangPoinUserbyPhoneNumber(config.Mongoconn, phonenumber, 13.0)
 	if err != nil {
-		http.Error(w, "Gagal mengurangi poin: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal mengurangi poin: " + err.Error())
 	}
 
 	// Get updated user data to return the current points
 	usr, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", bson.M{"phonenumber": phonenumber})
 	if err != nil {
-		http.Error(w, "Gagal mengambil data pengguna: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal mengambil data pengguna: " + err.Error())
 	}
 
 	// Add the current points to the response
@@ -484,5 +435,5 @@ func ApproveBimbinganbyPoin(w http.ResponseWriter, r *http.Request) {
 	responseMap["status"] = "success"
 	responseMap["poin_mahasiswa"] = fmt.Sprintf("Poin mahasiswa telah berkurang menjadi: %f", usr.Poin)
 
-	at.WriteJSON(w, http.StatusOK, responseMap)
+	return c.Status(fiber.StatusOK).JSON(responseMap)
 }

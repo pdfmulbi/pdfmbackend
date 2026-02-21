@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func GetSecretFromHeader(r *http.Request) (secret string) {
@@ -21,6 +23,24 @@ func GetLoginFromHeader(r *http.Request) (secret string) {
 		secret = r.Header.Get("login")
 	} else if r.Header.Get("Login") != "" {
 		secret = r.Header.Get("Login")
+	}
+	return
+}
+
+func GetSecretFromHeaderFiber(c *fiber.Ctx) (secret string) {
+	if c.Get("secret") != "" {
+		secret = c.Get("secret")
+	} else if c.Get("Secret") != "" {
+		secret = c.Get("Secret")
+	}
+	return
+}
+
+func GetLoginFromHeaderFiber(c *fiber.Ctx) (secret string) {
+	if c.Get("login") != "" {
+		secret = c.Get("login")
+	} else if c.Get("Login") != "" {
+		secret = c.Get("Login")
 	}
 	return
 }

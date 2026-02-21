@@ -1,0 +1,2 @@
+?   	github.com/gocroot	[no test files]
+?   	github.com/gocroot/config	[no test files]

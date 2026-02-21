@@ -137,9 +137,9 @@ func GetOneDoc[T any](db *mongo.Database, collection string, filter bson.M) (doc
 }
 
 func GetOneDocPdfm(db *mongo.Database, collectionName string, filter bson.M) (*mongo.SingleResult, error) {
-    collection := db.Collection(collectionName)
-    result := collection.FindOne(context.TODO(), filter)
-    return result, result.Err()
+	collection := db.Collection(collectionName)
+	result := collection.FindOne(context.TODO(), filter)
+	return result, result.Err()
 }
 
 // Fungsi untuk menghapus koleksi lmsusers

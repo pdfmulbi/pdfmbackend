@@ -1,0 +1,168 @@
+# github.com/gocroot
+.\fix_all.go:24:6: main redeclared in this block
+	.\fix.go:9:6: other declaration of main
+.\main.go:11:6: main redeclared in this block
+	.\fix.go:9:6: other declaration of main
+FAIL	github.com/gocroot [build failed]
+?   	github.com/gocroot/config	[no test files]
+--- FAIL: TestInsertFeedback (60.00s)
+    --- FAIL: TestInsertFeedback/Method_Not_Allowed (30.00s)
+        feedback_test.go:56: Expected status 405, got 401
+--- FAIL: TestGetAllFeedback (60.01s)
+    --- FAIL: TestGetAllFeedback/Invalid_Method (30.00s)
+        feedback_test.go:92: Expected status 405, got 401
+--- FAIL: TestCreateMergeHistory (90.01s)
+    setup_test.go:34: Gagal setup mock user: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: Unknown, Last error: dial tcp [::1]:27017: connectex: No connection could be made because the target machine actively refused it. }, ] }
+--- FAIL: TestGetMergeHistory (90.00s)
+    setup_test.go:34: Gagal setup mock user: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: Unknown, Last error: dial tcp [::1]:27017: connectex: No connection could be made because the target machine actively refused it. }, ] }
+--- FAIL: TestCreateCompressHistory (90.00s)
+    setup_test.go:34: Gagal setup mock user: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: Unknown, Last error: dial tcp [::1]:27017: connectex: No connection could be made because the target machine actively refused it. }, ] }
+--- FAIL: TestGetCompressHistory (90.00s)
+    setup_test.go:34: Gagal setup mock user: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: Unknown, Last error: dial tcp [::1]:27017: connectex: No connection could be made because the target machine actively refused it. }, ] }
+--- FAIL: TestCreateConvertHistory (90.00s)
+    setup_test.go:34: Gagal setup mock user: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: Unknown, Last error: dial tcp [::1]:27017: connectex: No connection could be made because the target machine actively refused it. }, ] }
+panic: test timed out after 10m0s
+	running tests:
+		TestGetConvertHistory (30s)
+
+goroutine 4869 [running]:
+testing.(*M).startAlarm.func1()
+	C:/Program Files/Go/src/testing/testing.go:2484 +0x394
+created by time.goFunc
+	C:/Program Files/Go/src/time/sleep.go:215 +0x2d
+
+goroutine 1 [chan receive, 1 minutes]:
+testing.(*T).Run(0xc000106a80, {0x10815ef?, 0x7ffcc4863fb0?}, 0x10bdf08)
+	C:/Program Files/Go/src/testing/testing.go:1859 +0x414
+testing.runTests.func1(0xc000106a80)
+	C:/Program Files/Go/src/testing/testing.go:2279 +0x37
+testing.tRunner(0xc000106a80, 0xc00041fc70)
+	C:/Program Files/Go/src/testing/testing.go:1792 +0xcb
+testing.runTests(0xc00000e120, {0x19e8900, 0x23, 0x23}, {0x1a004e0?, 0x7?, 0x19fe1c0?})
+	C:/Program Files/Go/src/testing/testing.go:2277 +0x4b4
+testing.(*M).Run(0xc00047a780)
+	C:/Program Files/Go/src/testing/testing.go:2142 +0x64a
+main.main()
+	_testmain.go:113 +0x9b
+
+goroutine 10 [select]:
+go.opencensus.io/stats/view.(*worker).start(0xc00008e200)
+	C:/Users/ProBook/go/pkg/mod/go.opencensus.io@v0.24.0/stats/view/worker.go:292 +0x9f
+created by go.opencensus.io/stats/view.init.0 in goroutine 1
+	C:/Users/ProBook/go/pkg/mod/go.opencensus.io@v0.24.0/stats/view/worker.go:34 +0x8d
+
+goroutine 12 [sync.Cond.Wait, 10 minutes]:
+sync.runtime_notifyListWait(0xc000383390, 0x0)
+	C:/Program Files/Go/src/runtime/sema.go:597 +0x15d
+sync.(*Cond).Wait(0x0?)
+	C:/Program Files/Go/src/sync/cond.go:71 +0x85
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*pool).createConnections.func2()
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:1156 +0xcb
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*pool).createConnections(0xc000318180, {0x11d4f90, 0xc000322e60}, 0x0?)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:1178 +0x104
+created by go.mongodb.org/mongo-driver/x/mongo/driver/topology.newPool in goroutine 1
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:241 +0x6dc
+
+goroutine 13 [sync.Cond.Wait, 10 minutes]:
+sync.runtime_notifyListWait(0xc000383390, 0x1)
+	C:/Program Files/Go/src/runtime/sema.go:597 +0x15d
+sync.(*Cond).Wait(0x0?)
+	C:/Program Files/Go/src/sync/cond.go:71 +0x85
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*pool).createConnections.func2()
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:1156 +0xcb
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*pool).createConnections(0xc000318180, {0x11d4f90, 0xc000322e60}, 0x0?)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:1178 +0x104
+created by go.mongodb.org/mongo-driver/x/mongo/driver/topology.newPool in goroutine 1
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:241 +0x6dc
+
+goroutine 14 [select]:
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*pool).maintain(0xc000318180, {0x11d4f90, 0xc000322e60}, 0x0?)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:1290 +0x1ca
+created by go.mongodb.org/mongo-driver/x/mongo/driver/topology.newPool in goroutine 1
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/pool.go:248 +0x857
+
+goroutine 15 [select]:
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*Server).update.func2(...)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/server.go:584
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*Server).update(0xc000171320)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/server.go:675 +0x7a9
+created by go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*Server).Connect in goroutine 1
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/server.go:252 +0x179
+
+goroutine 4592 [select]:
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*Topology).selectServerFromSubscription(0xc00044de10, {0x11d4f58, 0xc000634b40}, 0xc00070a150, {{0x11cd540?, 0xc000634ae0?}, 0xc00070a070?})
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/topology.go:741 +0x351
+go.mongodb.org/mongo-driver/x/mongo/driver/topology.(*Topology).SelectServer(0xc00044de10, {0x11d4f58, 0xc000634b40}, {0x11cd540, 0xc000634ae0})
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/topology/topology.go:589 +0x374
+go.mongodb.org/mongo-driver/x/mongo/driver.Operation.selectServer({0xc0008754b0, {0x106ed16, 0x4}, {0x11d0a50, 0xc00044de10}, 0xc0008754c0, {0x11cc2a0, 0xc000634ab0}, 0x0, 0x0, ...}, ...)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/operation.go:421 +0x505
+go.mongodb.org/mongo-driver/x/mongo/driver.Operation.getServerAndConnection({0xc0008754b0, {0x106ed16, 0x4}, {0x11d0a50, 0xc00044de10}, 0xc0008754c0, {0x11cc2a0, 0xc000634ab0}, 0x0, 0x0, ...}, ...)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/operation.go:430 +0x65
+go.mongodb.org/mongo-driver/x/mongo/driver.Operation.Execute({0xc0008754b0, {0x106ed16, 0x4}, {0x11d0a50, 0xc00044de10}, 0xc0008754c0, {0x11cc2a0, 0xc000634ab0}, 0x0, 0x0, ...}, ...)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/operation.go:636 +0x72e
+go.mongodb.org/mongo-driver/x/mongo/driver/operation.(*Delete).Execute(0xc00017c100, {0x11d4f20, 0x1a48920})
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/x/mongo/driver/operation/delete.go:119 +0x2a8
+go.mongodb.org/mongo-driver/mongo.(*Collection).delete(0xc00070a000, {0x11d4f20, 0x1a48920}, {0xf615a0?, 0xc000634a20?}, 0x0, 0x4, {0x0, 0x0, 0x0})
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/mongo/collection.go:499 +0x109a
+go.mongodb.org/mongo-driver/mongo.(*Collection).DeleteMany(...)
+	C:/Users/ProBook/go/pkg/mod/go.mongodb.org/mongo-driver@v1.16.0/mongo/collection.go:535
+github.com/gocroot/controller.setupMockToken(0xc000780e00)
+	D:/Brankas semster 5/p3/clone projek utama/pdfmbackend/controller/setup_test.go:21 +0x10d
+github.com/gocroot/controller.TestGetConvertHistory(0xc000780e00)
+	D:/Brankas semster 5/p3/clone projek utama/pdfmbackend/controller/history_test.go:108 +0x27
+testing.tRunner(0xc000780e00, 0x10bdf08)
+	C:/Program Files/Go/src/testing/testing.go:1792 +0xcb
+created by testing.(*T).Run in goroutine 1
+	C:/Program Files/Go/src/testing/testing.go:1851 +0x3f6
+
+goroutine 57 [sleep]:
+time.Sleep(0x3b9aca00)
+	C:/Program Files/Go/src/runtime/time.go:338 +0x167
+github.com/valyala/fasthttp.updateServerDate.func1()
+	C:/Users/ProBook/go/pkg/mod/github.com/valyala/fasthttp@v1.69.0/header.go:2339 +0x18
+created by github.com/valyala/fasthttp.updateServerDate in goroutine 56
+	C:/Users/ProBook/go/pkg/mod/github.com/valyala/fasthttp@v1.69.0/header.go:2337 +0x1f
+FAIL	github.com/gocroot/controller	601.125s
+?   	github.com/gocroot/docs	[no test files]
+ok  	github.com/gocroot/helper	1.113s
+ok  	github.com/gocroot/helper/at	(cached)
+?   	github.com/gocroot/helper/atapi	[no test files]
+?   	github.com/gocroot/helper/atdb	[no test files]
+?   	github.com/gocroot/helper/auth	[no test files]
+?   	github.com/gocroot/helper/dokped	[no test files]
+?   	github.com/gocroot/helper/fpdf	[no test files]
+?   	github.com/gocroot/helper/gcallapi	[no test files]
+?   	github.com/gocroot/helper/ghapi	[no test files]
+?   	github.com/gocroot/helper/ghupload	[no test files]
+?   	github.com/gocroot/helper/hub	[no test files]
+?   	github.com/gocroot/helper/jualin	[no test files]
+2026/02/22 01:14:51 error parsing uri: scheme must be "mongodb" or "mongodb+srv"
+FAIL	github.com/gocroot/helper/kimseok	0.298s
+?   	github.com/gocroot/helper/lms	[no test files]
+?   	github.com/gocroot/helper/menu	[no test files]
+?   	github.com/gocroot/helper/module	[no test files]
+?   	github.com/gocroot/helper/normalize	[no test files]
+?   	github.com/gocroot/helper/phone	[no test files]
+ok  	github.com/gocroot/helper/report	0.294s
+?   	github.com/gocroot/helper/tiket	[no test files]
+?   	github.com/gocroot/helper/waktu	[no test files]
+ok  	github.com/gocroot/helper/watoken	(cached)
+?   	github.com/gocroot/helper/whatsauth	[no test files]
+?   	github.com/gocroot/mod	[no test files]
+?   	github.com/gocroot/mod/daftar	[no test files]
+?   	github.com/gocroot/mod/helpdesk	[no test files]
+?   	github.com/gocroot/mod/idgrup	[no test files]
+?   	github.com/gocroot/mod/kyc	[no test files]
+?   	github.com/gocroot/mod/lms	[no test files]
+?   	github.com/gocroot/mod/lms/content	[no test files]
+?   	github.com/gocroot/mod/lmsdesa	[no test files]
+?   	github.com/gocroot/mod/otorisasiwebstatis	[no test files]
+?   	github.com/gocroot/mod/posint	[no test files]
+?   	github.com/gocroot/mod/presensi	[no test files]
+?   	github.com/gocroot/mod/siakad	[no test files]
+?   	github.com/gocroot/mod/tasklist	[no test files]
+?   	github.com/gocroot/mod/unsubscribe	[no test files]
+?   	github.com/gocroot/model	[no test files]
+?   	github.com/gocroot/route	[no test files]
+?   	github.com/gocroot/run	[no test files]
+FAIL

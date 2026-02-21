@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
-	"net/http"
 	"strings"
 
 	"github.com/gocroot/config"
@@ -11,103 +9,94 @@ import (
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/helper/watoken"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 	"github.com/whatsauth/itmodel"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetDataSenders(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetDataSenders(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	_, err = atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data user tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	existingprjs, err := atdb.GetAllDoc[[]model.SenderDasboard](config.Mongoconn, "sender", primitive.M{})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data senders tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
 	if len(existingprjs) == 0 {
 		var respn model.Response
 		respn.Status = "Error : Data senders tidak di temukan"
 		respn.Response = "Kakak belum input sender, silahkan input dulu ya"
-		at.WriteJSON(respw, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
-	at.WriteJSON(respw, http.StatusOK, existingprjs)
+	return c.Status(fiber.StatusOK).JSON(existingprjs)
 }
 
-func GetDataSendersTerblokir(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func GetDataSendersTerblokir(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	_, err = atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data user tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	existingprjs, err := atdb.GetAllDoc[[]model.SenderDasboard](config.Mongoconn, "bin", primitive.M{})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data senders tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
 	if len(existingprjs) == 0 {
 		var respn model.Response
 		respn.Status = "Error : Data senders tidak di temukan"
 		respn.Response = "Kakak belum input sender, silahkan input dulu ya"
-		at.WriteJSON(respw, http.StatusNotFound, respn)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(respn)
 	}
-	at.WriteJSON(respw, http.StatusOK, existingprjs)
+	return c.Status(fiber.StatusOK).JSON(existingprjs)
 }
 
-func GetRekapBlast(respw http.ResponseWriter, req *http.Request) {
+func GetRekapBlast(c *fiber.Ctx) error {
 	var respn model.Response
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	//check eksistensi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
 	//melakukan pengambilan data belum terlayani
@@ -116,15 +105,13 @@ func GetRekapBlast(respw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		respn.Status = "Error : penghitungan data queue"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusConflict, respn)
-		return
+		return c.Status(fiber.StatusConflict).JSON(respn)
 	}
 	countsent, err := atdb.GetCountDoc(config.Mongoconn, "sent", bson.M{})
 	if err != nil {
 		respn.Status = "Error : penghitungan data sent"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusConflict, respn)
-		return
+		return c.Status(fiber.StatusConflict).JSON(respn)
 	}
 
 	rekap := model.HelpdeskRekap{
@@ -132,44 +119,39 @@ func GetRekapBlast(respw http.ResponseWriter, req *http.Request) {
 		Done: int(countsent),
 		All:  int(countqueue + countsent),
 	}
-	at.WriteJSON(respw, http.StatusOK, rekap)
+	return c.Status(fiber.StatusOK).JSON(rekap)
 }
 
 // melakukan pendaftaran nomor blast dengan pengecekan apakah suda link device
-func PutNomorBlast(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func PutNomorBlast(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid "
-		respn.Info = at.GetSecretFromHeader(req)
-		respn.Location = "Decode Token Error: " + at.GetLoginFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
+		respn.Location = "Decode Token Error: " + at.GetLoginFromHeaderFiber(c)
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var newbot model.SenderDasboard
-	err = json.NewDecoder(req.Body).Decode(&newbot)
-	if err != nil {
+	if err := c.BodyParser(&newbot); err != nil {
 		var respn model.Response
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		docuser.PhoneNumber = payload.Id
 		docuser.Name = payload.Alias
-		at.WriteJSON(respw, http.StatusNotFound, docuser)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(docuser)
 	}
 	docuser.Name = payload.Alias
 	//check apakah user sudah linked device atau belum
 	if docuser.LinkedDevice == "" {
 		var respn model.Response
 		respn.Status = "Error : User belum melakukan linked device"
-		at.WriteJSON(respw, http.StatusExpectationFailed, respn)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(respn)
 	}
 	//check validasi nomor inputan dengan mengirimkan pesan
 	newmsg := model.SendText{
@@ -184,29 +166,24 @@ func PutNomorBlast(respw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			respn.Response = err.Error()
 		}
-		at.WriteJSON(respw, http.StatusExpectationFailed, respn)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(respn)
 	}
 	//request linked device nomor yang didaftarkan
 	tokenbotbaru, err := watoken.Encode(newbot.Phonenumber, config.PrivateKey)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusMisdirectedRequest, docuser)
-		return
+		return c.Status(fiber.StatusMisdirectedRequest).JSON(docuser)
 	}
 	hcode, qrstat, err := atapi.Get[model.QRStatus](config.WAAPIGetDevice + tokenbotbaru)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusMisdirectedRequest, docuser)
-		return
+		return c.Status(fiber.StatusMisdirectedRequest).JSON(docuser)
 	}
-	if hcode != http.StatusOK {
-		at.WriteJSON(respw, http.StatusFailedDependency, docuser)
-		return
+	if hcode != fiber.StatusOK {
+		return c.Status(fiber.StatusFailedDependency).JSON(docuser)
 	}
 	//insert ke coll sender dan profile
 	contohsender, err := atdb.GetOneLatestDoc[itmodel.Profile](config.Mongoconn, "sender", bson.M{})
 	if err != nil {
-		at.WriteJSON(respw, http.StatusFailedDependency, docuser)
-		return
+		return c.Status(fiber.StatusFailedDependency).JSON(docuser)
 	}
 	contohsender.Botname = docuser.Name
 	contohsender.Phonenumber = newbot.Phonenumber
@@ -219,13 +196,11 @@ func PutNomorBlast(respw http.ResponseWriter, req *http.Request) {
 	contohsender.URL = baseURL + newbot.Phonenumber
 	contohsender.Token, err = watoken.EncodeforHours(newbot.Phonenumber, docuser.Name, config.PrivateKey, 43830)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusFailedDependency, docuser)
-		return
+		return c.Status(fiber.StatusFailedDependency).JSON(docuser)
 	}
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "sender", contohsender)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusFailedDependency, docuser)
-		return
+		return c.Status(fiber.StatusFailedDependency).JSON(docuser)
 	}
 	//daftarkan ke webhook agar bot aktif dan insert kan ke profile
 	whdt := model.Webhook{
@@ -239,13 +214,11 @@ func PutNomorBlast(respw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			respn.Response = err.Error()
 		}
-		at.WriteJSON(respw, http.StatusExpectationFailed, respn)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(respn)
 	}
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "profile", contohsender)
 	if err != nil {
-		at.WriteJSON(respw, http.StatusFailedDependency, docuser)
-		return
+		return c.Status(fiber.StatusFailedDependency).JSON(docuser)
 	}
 
 	//jika belum linked device status = true maka kasih code
@@ -263,10 +236,9 @@ func PutNomorBlast(respw http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				respn.Response = err.Error()
 			}
-			at.WriteJSON(respw, http.StatusExpectationFailed, respn)
-			return
+			return c.Status(fiber.StatusExpectationFailed).JSON(respn)
 		}
 	}
 	//kirim ke frontend
-	at.WriteJSON(respw, http.StatusOK, qrstat)
+	return c.Status(fiber.StatusOK).JSON(qrstat)
 }

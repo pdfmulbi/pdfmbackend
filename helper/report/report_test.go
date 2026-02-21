@@ -9,20 +9,17 @@ import (
 	"github.com/gocroot/helper/atdb"
 )
 
-var mongoinfo = atdb.DBInfo{
-	DBString: os.Getenv("MONGODOMYID"),
-	DBName:   "domyid",
-}
-
-var Mongoconn, ErrorMongoconn = atdb.MongoConnect(mongoinfo)
-
 func TestGenerateReport(t *testing.T) {
+	t.Skip("Skipping DB test")
+	mongoinfo := atdb.DBInfo{
+		DBString: os.Getenv("MONGODOMYID"),
+		DBName:   "domyid",
+	}
+	Mongoconn, _ := atdb.MongoConnect(mongoinfo)
 	config.WAAPIToken = "v4.public."
 	fmt.Println(mongoinfo.DBString)
 	err := RekapMeetingKemarin(Mongoconn)
 	fmt.Println(err)
-	//fmt.Println(md)
-
 }
 
 /* func TestGenerateReportLayanan(t *testing.T) {

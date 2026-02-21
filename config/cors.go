@@ -2,8 +2,9 @@ package config
 
 import (
 	"log"
-	"net/http"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // Daftar origins yang diizinkan
@@ -32,36 +33,39 @@ func isAllowedOrigin(origin string) bool {
 	return false
 }
 
-// Fungsi untuk mengatur header CORS
-func SetAccessControlHeaders(w http.ResponseWriter, r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	normalizedOrigin := normalizeOrigin(origin)
+// Fungsi untuk mengatur header CORS sebagai Fiber Middleware
+func CorsMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		origin := c.Get("Origin")
+		normalizedOrigin := normalizeOrigin(origin)
 
-	// Log origin untuk debugging
-	log.Printf("Incoming request from Origin: %s", origin)
+		// Log origin untuk debugging
+		log.Printf("Incoming request from Origin: %s", origin)
 
-	if isAllowedOrigin(normalizedOrigin) {
-		// Tambahkan header Vary untuk cache
-		w.Header().Set("Vary", "Origin")
+		if isAllowedOrigin(normalizedOrigin) {
+			// Tambahkan header Vary untuk cache
+			c.Set("Vary", "Origin")
 
-		// Tangani preflight request (OPTIONS)
-		if r.Method == http.MethodOptions {
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
-			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, DELETE, PUT, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Max-Age", "3600")
-			w.WriteHeader(http.StatusNoContent)
-			return true
+			// Tangani preflight request (OPTIONS)
+			if c.Method() == fiber.MethodOptions {
+				c.Set("Access-Control-Allow-Credentials", "true")
+				c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
+				c.Set("Access-Control-Allow-Methods", "POST, GET, DELETE, PUT, OPTIONS")
+				c.Set("Access-Control-Allow-Origin", "*")
+				c.Set("Access-Control-Max-Age", "3600")
+				return c.SendStatus(fiber.StatusNoContent)
+			}
+
+			// Header untuk permintaan utama
+			c.Set("Access-Control-Allow-Credentials", "true")
+			c.Set("Access-Control-Allow-Origin", "*")
+			c.Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
+			c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
+
+			return c.Next()
 		}
 
-		// Header untuk permintaan utama
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
-		return false
+		// Jika origin tidak diizinkan, tetap lanjutkan secara normal tapi tanpa header CORS
+		return c.Next()
 	}
-
-	return false
 }

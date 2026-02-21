@@ -2,20 +2,21 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type NotificationHandler struct{}
 
 // GetNotifications retrieves all notifications for the authenticated user
 // GetNotifications godoc
@@ -28,44 +29,28 @@ import (
 // @Failure 401 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications [get]
 // @Security BearerAuth
-func GetNotifications(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
+func (h *NotificationHandler) GetNotifications(c *fiber.Ctx) error {
 	// Get user from token
-	userID, err := GetUserIDFromToken(r)
+	userID, err := h.GetUserIDFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
 		// PERBAIKAN: Gunakan struct Response
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized: " + err.Error()})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.NotificationActionResponse{Status: 401, Message: "Unauthorized: " + err.Error()})
 	}
 
 	// Get MongoDB collection
-	collection := GetMongoCollection("notifications")
+	collection := h.GetMongoCollection("notifications")
 
 	// Find all notifications for this user, sorted by created_at descending
 	opts := options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}).SetLimit(50)
 	cursor, err := collection.Find(context.Background(), bson.M{"user_id": userID}, opts)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to fetch notifications"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(model.NotificationActionResponse{Status: 500, Message: "Failed to fetch notifications"})
 	}
 	defer cursor.Close(context.Background())
 
 	var notifications []model.Notification
 	if err = cursor.All(context.Background(), &notifications); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to parse notifications"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(model.NotificationActionResponse{Status: 500, Message: "Failed to parse notifications"})
 	}
 
 	// Return empty array if no notifications found
@@ -74,8 +59,8 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Response ini sudah benar pakai struct
-	json.NewEncoder(w).Encode(model.NotificationResponse{
-		Status:        http.StatusOK,
+	return c.Status(fiber.StatusOK).JSON(model.NotificationResponse{
+		Status:        fiber.StatusOK,
 		Message:       "Notifications retrieved successfully",
 		Notifications: notifications,
 	})
@@ -93,35 +78,19 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications [post]
 // @Security BearerAuth
-func AddNotification(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	userID, err := GetUserIDFromToken(r)
+func (h *NotificationHandler) AddNotification(c *fiber.Ctx) error {
+	userID, err := h.GetUserIDFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
 	}
 
 	var req model.NotificationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 400, Message: "Invalid request body"})
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.NotificationActionResponse{Status: 400, Message: "Invalid request body"})
 	}
 
 	if req.Type == "" || req.Message == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 400, Message: "Type and message are required"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.NotificationActionResponse{Status: 400, Message: "Type and message are required"})
 	}
 
 	notification := model.Notification{
@@ -135,18 +104,15 @@ func AddNotification(w http.ResponseWriter, r *http.Request) {
 		FileName:  req.FileName,
 	}
 
-	collection := GetMongoCollection("notifications")
+	collection := h.GetMongoCollection("notifications")
 	_, err = collection.InsertOne(context.Background(), notification)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to create notification"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(model.NotificationActionResponse{Status: 500, Message: "Failed to create notification"})
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	// PERBAIKAN: Gunakan NotificationActionResponse
-	json.NewEncoder(w).Encode(model.NotificationActionResponse{
-		Status:  http.StatusCreated,
+	return c.Status(fiber.StatusCreated).JSON(model.NotificationActionResponse{
+		Status:  fiber.StatusCreated,
 		Message: "Notification created successfully",
 		ID:      notification.ID.Hex(),
 	})
@@ -162,39 +128,25 @@ func AddNotification(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications/read [put]
 // @Security BearerAuth
-func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	userID, err := GetUserIDFromToken(r)
+func (h *NotificationHandler) MarkAllAsRead(c *fiber.Ctx) error {
+	userID, err := h.GetUserIDFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
 	}
 
-	collection := GetMongoCollection("notifications")
+	collection := h.GetMongoCollection("notifications")
 	_, err = collection.UpdateMany(
 		context.Background(),
 		bson.M{"user_id": userID},
 		bson.M{"$set": bson.M{"is_read": true}},
 	)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to mark as read"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(model.NotificationActionResponse{Status: 500, Message: "Failed to mark as read"})
 	}
 
 	// PERBAIKAN: Gunakan NotificationActionResponse
-	json.NewEncoder(w).Encode(model.NotificationActionResponse{
-		Status:  http.StatusOK,
+	return c.Status(fiber.StatusOK).JSON(model.NotificationActionResponse{
+		Status:  fiber.StatusOK,
 		Message: "All notifications marked as read",
 	})
 }
@@ -209,44 +161,30 @@ func MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.NotificationActionResponse
 // @Router /pdfm/notifications [delete]
 // @Security BearerAuth
-func ClearNotifications(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	userID, err := GetUserIDFromToken(r)
+func (h *NotificationHandler) ClearNotifications(c *fiber.Ctx) error {
+	userID, err := h.GetUserIDFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.NotificationActionResponse{Status: 401, Message: "Unauthorized"})
 	}
 
-	collection := GetMongoCollection("notifications")
+	collection := h.GetMongoCollection("notifications")
 	_, err = collection.DeleteMany(context.Background(), bson.M{"user_id": userID})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(model.NotificationActionResponse{Status: 500, Message: "Failed to clear notifications"})
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(model.NotificationActionResponse{Status: 500, Message: "Failed to clear notifications"})
 	}
 
 	// PERBAIKAN: Gunakan NotificationActionResponse
-	json.NewEncoder(w).Encode(model.NotificationActionResponse{
-		Status:  http.StatusOK,
+	return c.Status(fiber.StatusOK).JSON(model.NotificationActionResponse{
+		Status:  fiber.StatusOK,
 		Message: "All notifications cleared",
 	})
 }
 
 // GetUserIDFromToken extracts user ID from the Authorization header token
 // Uses the existing Bearer token authentication system from pdfm.go
-func GetUserIDFromToken(r *http.Request) (primitive.ObjectID, error) {
+func (h *NotificationHandler) GetUserIDFromToken(c *fiber.Ctx) (primitive.ObjectID, error) {
 	// Get token from Authorization header
-	authHeader := r.Header.Get("Authorization")
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
 		return primitive.NilObjectID, errors.New("missing token")
 	}
@@ -279,13 +217,13 @@ func GetUserIDFromToken(r *http.Request) (primitive.ObjectID, error) {
 }
 
 // GetMongoCollection returns a MongoDB collection
-func GetMongoCollection(collectionName string) *mongo.Collection {
+func (h *NotificationHandler) GetMongoCollection(collectionName string) *mongo.Collection {
 	return config.Mongoconn.Collection(collectionName)
 }
 
 // CreateNotificationForUser creates a notification for a specific user by their ID
 // This is useful for internal services to create notifications
-func CreateNotificationForUser(userID primitive.ObjectID, notifType, message, icon, fileName string) error {
+func (h *NotificationHandler) CreateNotificationForUser(userID primitive.ObjectID, notifType, message, icon, fileName string) error {
 	notification := model.Notification{
 		ID:        primitive.NewObjectID(),
 		UserID:    userID,
@@ -297,7 +235,7 @@ func CreateNotificationForUser(userID primitive.ObjectID, notifType, message, ic
 		FileName:  fileName,
 	}
 
-	collection := GetMongoCollection("notifications")
+	collection := h.GetMongoCollection("notifications")
 	_, err := collection.InsertOne(context.Background(), notification)
 	return err
 }

@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"encoding/json"
-	"net/http"
 	"sync"
+
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/at"
@@ -15,25 +15,28 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func GetHome(respw http.ResponseWriter, req *http.Request) {
+func GetHome(c *fiber.Ctx) error {
 	var resp model.Response
 	resp.Response = at.GetIPaddress()
-	at.WriteJSON(respw, http.StatusOK, resp)
+	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func PostInboxNomor(respw http.ResponseWriter, req *http.Request) {
+func PostInboxNomor(c *fiber.Ctx) error {
 	var resp itmodel.Response
 	var msg itmodel.IteungMessage
-	httpstatus := http.StatusUnauthorized
+	httpstatus := fiber.StatusUnauthorized
 	resp.Response = "Wrong Secret"
-	waphonenumber := at.GetParam(req)
+	waphonenumber := c.Params("phonenumber") // Adjust param name if different in route.go
+	if waphonenumber == "" {                 // fallback to getparam equivalent if param not named
+		waphonenumber = c.Params("*")
+	}
 	prof, err := whatsauth.GetAppProfile(waphonenumber, config.Mongoconn)
 	if err != nil {
 		resp.Response = err.Error()
-		httpstatus = http.StatusServiceUnavailable
+		httpstatus = fiber.StatusServiceUnavailable
 	}
-	if at.GetSecretFromHeader(req) == prof.Secret {
-		err := json.NewDecoder(req.Body).Decode(&msg)
+	if at.GetSecretFromHeaderFiber(c) == prof.Secret {
+		err := c.BodyParser(&msg)
 		if err != nil {
 			resp.Response = err.Error()
 		} else {
@@ -43,25 +46,23 @@ func PostInboxNomor(respw http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	at.WriteJSON(respw, httpstatus, resp)
+	return c.Status(httpstatus).JSON(resp)
 }
 
 // jalan setiap jam 3 pagi
-func GetNewToken(respw http.ResponseWriter, req *http.Request) {
+// jalan setiap jam 3 pagi
+func GetNewToken(c *fiber.Ctx) error {
 	var resp model.Response
-	httpstatus := http.StatusServiceUnavailable
+	httpstatus := fiber.StatusServiceUnavailable
 
 	var wg sync.WaitGroup
-	wg.Add(3) // Menambahkan jumlah goroutine yang akan dijalankan
+	wg.Add(3)
 
-	// Mutex untuk mengamankan akses ke variabel resp dan httpstatus
 	var mu sync.Mutex
-	// Variabel untuk menyimpan kesalahan terakhir
 	var lastErr error
 
-	// 1. Refresh token
 	go func() {
-		defer wg.Done() // Memanggil wg.Done() setelah fungsi selesai
+		defer wg.Done()
 		profs, err := atdb.GetAllDoc[[]model.Profile](config.Mongoconn, "profile", bson.M{})
 		if err != nil {
 			mu.Lock()
@@ -80,53 +81,50 @@ func GetNewToken(respw http.ResponseWriter, req *http.Request) {
 				mu.Lock()
 				lastErr = err
 				resp.Response = err.Error()
-				httpstatus = http.StatusInternalServerError
+				httpstatus = fiber.StatusInternalServerError
 				mu.Unlock()
-				continue // Lanjutkan ke iterasi berikutnya
+				continue
 			}
 			mu.Lock()
 			resp.Response = at.Jsonstr(res.ModifiedCount)
-			httpstatus = http.StatusOK
+			httpstatus = fiber.StatusOK
 			mu.Unlock()
 		}
 	}()
 
-	// 2. Menjalankan fungsi RekapMeetingKemarin dalam goroutine
 	go func() {
-		defer wg.Done() // Memanggil wg.Done() setelah fungsi selesai
+		defer wg.Done()
 		if err := report.RekapMeetingKemarin(config.Mongoconn); err != nil {
 			mu.Lock()
 			lastErr = err
 			resp.Response = err.Error()
-			httpstatus = http.StatusInternalServerError
+			httpstatus = fiber.StatusInternalServerError
 			mu.Unlock()
 		}
 	}()
 
-	// 3. Menjalankan fungsi RekapPagiHari dalam goroutine
 	go func() {
-		defer wg.Done() // Memanggil wg.Done() setelah fungsi selesai
+		defer wg.Done()
 		if err := report.RekapPagiHari(config.Mongoconn); err != nil {
 			mu.Lock()
 			lastErr = err
 			resp.Response = err.Error()
-			httpstatus = http.StatusInternalServerError
+			httpstatus = fiber.StatusInternalServerError
 			mu.Unlock()
 		}
 	}()
 
-	wg.Wait() // Menunggu sampai semua goroutine selesai
+	wg.Wait()
 
-	// Menggunakan status yang benar dari kesalahan terakhir jika ada
 	if lastErr != nil {
-		at.WriteJSON(respw, httpstatus, resp)
+		return c.Status(httpstatus).JSON(resp)
 	} else {
-		at.WriteJSON(respw, http.StatusOK, resp)
+		return c.Status(fiber.StatusOK).JSON(resp)
 	}
 }
 
-func NotFound(respw http.ResponseWriter, req *http.Request) {
+func NotFound(c *fiber.Ctx) error {
 	var resp model.Response
 	resp.Response = "Not Found"
-	at.WriteJSON(respw, http.StatusNotFound, resp)
+	return c.Status(fiber.StatusNotFound).JSON(resp)
 }

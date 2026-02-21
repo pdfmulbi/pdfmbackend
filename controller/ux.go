@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/at"
@@ -25,37 +25,32 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func PostTaskList(w http.ResponseWriter, r *http.Request) {
+func PostTaskList(c *fiber.Ctx) error {
 	var resp itmodel.Response
-	prof, err := whatsauth.GetAppProfile(at.GetParam(r), config.Mongoconn)
+	prof, err := whatsauth.GetAppProfile(c.Query("url"), config.Mongoconn)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(w, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
-	if at.GetSecretFromHeader(r) != prof.Secret {
-		resp.Response = "Salah secret: " + at.GetSecretFromHeader(r)
-		at.WriteJSON(w, http.StatusUnauthorized, resp)
-		return
+	if at.GetSecretFromHeaderFiber(c) != prof.Secret {
+		resp.Response = "Salah secret: " + at.GetSecretFromHeaderFiber(c)
+		return c.Status(fiber.StatusUnauthorized).JSON(resp)
 	}
 	var tasklists []report.TaskList
-	err = json.NewDecoder(r.Body).Decode(&tasklists)
+	err = c.BodyParser(&tasklists)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(w, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
 	docusr, err := atdb.GetOneLatestDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": tasklists[0].PhoneNumber})
 	if err != nil {
 		resp.Response = "Error : user tidak di temukan " + err.Error()
-		at.WriteJSON(w, http.StatusForbidden, resp)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(resp)
 	}
 	lapuser, err := atdb.GetOneLatestDoc[model.Laporan](config.Mongoconn, "uxlaporan", primitive.M{"_id": tasklists[0].LaporanID})
 	if err != nil {
 		resp.Response = "Error : user tidak di temukan " + err.Error()
-		at.WriteJSON(w, http.StatusForbidden, resp)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(resp)
 	}
 	for _, task := range tasklists {
 		task.ProjectID = lapuser.Project.ID
@@ -70,83 +65,72 @@ func PostTaskList(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			resp.Info = "Kakak sudah melaporkan tasklist sebelumnya"
 			resp.Response = "Error : tidak bisa insert ke database " + err.Error()
-			at.WriteJSON(w, http.StatusForbidden, resp)
-			return
+			return c.Status(fiber.StatusForbidden).JSON(resp)
 		}
 	}
 	res, err := report.TambahPoinTasklistbyPhoneNumber(config.Mongoconn, docusr.PhoneNumber, lapuser.Project, float64(len(tasklists)), "tasklist")
 	if err != nil {
 		resp.Info = "Tambah Poin Tasklist gagal"
 		resp.Response = err.Error()
-		at.WriteJSON(w, http.StatusExpectationFailed, resp)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(resp)
 	}
 	resp.Response = strconv.Itoa(int(res.ModifiedCount))
 	resp.Info = docusr.Name
-	at.WriteJSON(w, http.StatusOK, resp)
+	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func PostPresensi(respw http.ResponseWriter, req *http.Request) {
+func PostPresensi(c *fiber.Ctx) error {
 	var resp itmodel.Response
-	prof, err := whatsauth.GetAppProfile(at.GetParam(req), config.Mongoconn)
+	prof, err := whatsauth.GetAppProfile(c.Query("url"), config.Mongoconn)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
-	if at.GetSecretFromHeader(req) != prof.Secret {
-		resp.Response = "Salah secret: " + at.GetSecretFromHeader(req)
-		at.WriteJSON(respw, http.StatusUnauthorized, resp)
-		return
+	if at.GetSecretFromHeaderFiber(c) != prof.Secret {
+		resp.Response = "Salah secret: " + at.GetSecretFromHeaderFiber(c)
+		return c.Status(fiber.StatusUnauthorized).JSON(resp)
 	}
 	var presensi report.PresensiDomyikado
-	err = json.NewDecoder(req.Body).Decode(&presensi)
+	err = c.BodyParser(&presensi)
 	if err != nil {
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, resp)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(resp)
 	}
 	docusr, err := atdb.GetOneLatestDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": presensi.PhoneNumber})
 	if err != nil {
 		resp.Response = "Error : user tidak di temukan " + err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, resp)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(resp)
 	}
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "presensi", presensi)
 	if err != nil {
 		resp.Info = "Kakak sudah melaporkan presensi sebelumnya"
 		resp.Response = "Error : tidak bisa insert ke database " + err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, resp)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(resp)
 	}
 	res, err := report.TambahPoinPresensibyPhoneNumber(config.Mongoconn, presensi.PhoneNumber, presensi.Lokasi, presensi.Skor, config.WAAPIToken, config.WAAPIMessage, "presensi")
 	if err != nil {
 		resp.Info = "Tambah Poin Presensi gagal"
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusExpectationFailed, resp)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(resp)
 	}
 	resp.Response = strconv.Itoa(int(res.ModifiedCount))
 	resp.Info = docusr.Name
-	at.WriteJSON(respw, http.StatusOK, resp)
+	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-// testimoni dari useng lms pamong
-func PostTestimoni(respw http.ResponseWriter, req *http.Request) {
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+func PostTestimoni(c *fiber.Ctx) error {
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid "
-		respn.Info = at.GetSecretFromHeader(req)
-		respn.Location = "Decode Token Error: " + at.GetLoginFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
+		respn.Location = "Decode Token Error: " + at.GetLoginFromHeaderFiber(c)
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	userdt := lms.GetDataFromAPI(payload.Id)
 	if userdt.Data.Fullname == "" {
-		at.WriteJSON(respw, http.StatusNotFound, userdt)
-		return
+		return c.Status(fiber.StatusNotFound).JSON(userdt)
 	}
 	//pindah ke struck user
 	var usersub model.Peserta
@@ -159,12 +143,11 @@ func PostTestimoni(respw http.ResponseWriter, req *http.Request) {
 
 	var rating report.Rating
 	var respn model.Response
-	err = json.NewDecoder(req.Body).Decode(&rating)
+	err = c.BodyParser(&rating)
 	if err != nil {
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	usersub.Rating = rating.Rating
 	usersub.Komentar = rating.Komentar
@@ -172,23 +155,20 @@ func PostTestimoni(respw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		respn.Status = "Error : Data laporan tidak berhasil di update data rating"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	respn.Response = res.Hex()
 	respn.Info = usersub.Fullname
-	at.WriteJSON(respw, http.StatusOK, respn)
+	return c.Status(fiber.StatusOK).JSON(respn)
 }
 
-// mendapatkan random testi 4 buah untuk halaman depan
-func GetRandomTesti4(respw http.ResponseWriter, req *http.Request) {
+func GetRandomTesti4(c *fiber.Ctx) error {
 	var respn model.Response
 	lstpeserta, err := atdb.GetRandomDoc[model.Peserta](config.Mongoconn, "unsubs", 4)
 	if err != nil {
 		respn.Status = "Error : Data laporan tidak berhasil di update data rating"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	var listtesti []model.Testi
 	for _, testi := range lstpeserta {
@@ -202,35 +182,31 @@ func GetRandomTesti4(respw http.ResponseWriter, req *http.Request) {
 	testidepan := model.Depan{
 		List: listtesti,
 	}
-	at.WriteJSON(respw, http.StatusOK, testidepan)
+	return c.Status(fiber.StatusOK).JSON(testidepan)
 }
 
-// feedback dan meeting jadi satu disini
-func PostUnsubscribe(respw http.ResponseWriter, req *http.Request) {
+func PostUnsubscribe(c *fiber.Ctx) error {
 	var rating report.Rating
 	var respn model.Response
-	err := json.NewDecoder(req.Body).Decode(&rating)
+	err := c.BodyParser(&rating)
 	if err != nil {
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	objectId, err := primitive.ObjectIDFromHex(rating.ID)
 	if err != nil {
 		respn.Status = "Error : ObjectID Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	hasil, err := atdb.GetOneLatestDoc[model.Peserta](config.Mongoconn, "sent", primitive.M{"_id": objectId})
 	if err != nil {
 		respn.Status = "Error : Data laporan tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	hasil.Rating = rating.Rating
 	hasil.Komentar = rating.Komentar
@@ -238,97 +214,85 @@ func PostUnsubscribe(respw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		respn.Status = "Error : Data laporan tidak berhasil di update data rating"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	respn.Response = res.Hex()
 	respn.Info = hasil.Fullname
-	at.WriteJSON(respw, http.StatusOK, respn)
+	return c.Status(fiber.StatusOK).JSON(respn)
 }
 
-// mendapatkan data FAQ
-func GetFAQ(respw http.ResponseWriter, req *http.Request) {
-	id := at.GetParam(req)
+func GetFAQ(c *fiber.Ctx) error {
+	id := c.Params("id")
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : ObjectID Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	hasil, err := atdb.GetOneLatestDoc[kimseok.Datasets](config.Mongoconn, "faq", primitive.M{"_id": objectId})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data profile user sent tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
-	at.WriteJSON(respw, http.StatusOK, hasil)
+	return c.Status(fiber.StatusOK).JSON(hasil)
 }
 
-// mendapatkan user yang sent dan mau unnsubscribe
-func GetSentItem(respw http.ResponseWriter, req *http.Request) {
-	id := at.GetParam(req)
+func GetSentItem(c *fiber.Ctx) error {
+	id := c.Params("id")
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : ObjectID Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	hasil, err := atdb.GetOneLatestDoc[model.Peserta](config.Mongoconn, "sent", primitive.M{"_id": objectId})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data profile user sent tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	hasil.PhoneNumber = ""
-	at.WriteJSON(respw, http.StatusOK, hasil)
+	return c.Status(fiber.StatusOK).JSON(hasil)
 }
 
-// mendapatkan tiket yang sudah closed Profile, err := atdb.GetOneDoc[itmodel.Profile](Mongoconn, "profile", primitive.M{"phonenumber": PhoneNumber})
-func GetClosedTicket(respw http.ResponseWriter, req *http.Request) {
-	id := at.GetParam(req)
+func GetClosedTicket(c *fiber.Ctx) error {
+	id := c.Params("id")
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : ObjectID Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	hasil, err := atdb.GetOneLatestDoc[tiket.Bantuan](config.Mongoconn, "tiket", primitive.M{"_id": objectId})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data tiket tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 
-	at.WriteJSON(respw, http.StatusOK, hasil)
+	return c.Status(fiber.StatusOK).JSON(hasil)
 }
 
-// mendapatkan semua list bot yang aktif
-func GetBotList(respw http.ResponseWriter, req *http.Request) {
+func GetBotList(c *fiber.Ctx) error {
 	Profiles, err := atdb.GetAllDoc[[]itmodel.Profile](config.Mongoconn, "profile", primitive.M{})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data tiket tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	var phonelist []string
 
@@ -337,28 +301,25 @@ func GetBotList(respw http.ResponseWriter, req *http.Request) {
 	}
 	hasil := model.PhoneList{PhoneList: phonelist}
 
-	at.WriteJSON(respw, http.StatusOK, hasil)
+	return c.Status(fiber.StatusOK).JSON(hasil)
 }
 
-// feedback dari tiket yang sudah tertutup
-func PostMasukanTiket(respw http.ResponseWriter, req *http.Request) {
+func PostMasukanTiket(c *fiber.Ctx) error {
 	var rating report.Rating
 	var respn model.Response
-	err := json.NewDecoder(req.Body).Decode(&rating)
+	err := c.BodyParser(&rating)
 	if err != nil {
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	objectId, err := primitive.ObjectIDFromHex(rating.ID)
 	if err != nil {
 		respn.Status = "Error : ObjectID Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	updatefields := primitive.M{
 		"ratelayanan": rating.Rating,
@@ -368,16 +329,14 @@ func PostMasukanTiket(respw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		respn.Status = "Error : Data laporan tidak berhasil di update data rating"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	//mendapatkan document untuk informasi ke admin
 	hasil, err := atdb.GetOneLatestDoc[tiket.Bantuan](config.Mongoconn, "tiket", primitive.M{"_id": objectId})
 	if err != nil {
 		respn.Status = "Error : Data laporan tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 
 	nama := hasil.UserName
@@ -397,43 +356,39 @@ func PostMasukanTiket(respw http.ResponseWriter, req *http.Request) {
 	}
 	go atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
 
-	at.WriteJSON(respw, http.StatusOK, respn)
+	return c.Status(fiber.StatusOK).JSON(respn)
 }
 
-func PostMeeting(w http.ResponseWriter, r *http.Request) {
+func PostMeeting(c *fiber.Ctx) error {
 	var respn model.Response
 	//otorisasi dan validasi inputan
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(r))
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(r)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var event gcallapi.SimpleEvent
-	err = json.NewDecoder(r.Body).Decode(&event)
+	err = c.BodyParser(&event)
 	if err != nil {
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	//check validasi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
 	if err != nil {
 		respn.Status = "Error : Data user tidak di temukan: " + payload.Id
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	prjuser, err := atdb.GetOneDoc[model.Project](config.Mongoconn, "project", primitive.M{"_id": event.ProjectID})
 	if err != nil {
 		respn.Status = "Error : Data project tidak di temukan: " + event.ProjectID.Hex()
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	//lojik inputan post
 	var lap model.Laporan
@@ -455,22 +410,19 @@ func PostMeeting(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respn.Status = "Gagal Membuat Google Calendar"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotModified, respn)
-		return
+		return c.Status(fiber.StatusNotModified).JSON(respn)
 	}
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "meetinglog", gevt)
 	if err != nil {
 		respn.Status = "Gagal Insert Database meetinglog"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotModified, respn)
-		return
+		return c.Status(fiber.StatusNotModified).JSON(respn)
 	}
 	event.ID, err = atdb.InsertOneDoc(config.Mongoconn, "meeting", event)
 	if err != nil {
 		respn.Status = "Gagal Insert Database meeting"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotModified, respn)
-		return
+		return c.Status(fiber.StatusNotModified).JSON(respn)
 	}
 	lap.MeetID = event.ID
 	lap.MeetEvent = event
@@ -479,16 +431,14 @@ func PostMeeting(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respn.Status = "Gagal Insert Database"
 		respn.Response = err.Error()
-		at.WriteJSON(w, http.StatusNotModified, respn)
-		return
+		return c.Status(fiber.StatusNotModified).JSON(respn)
 	}
 	_, err = report.TambahPoinLaporanbyPhoneNumber(config.Mongoconn, prjuser, docuser.PhoneNumber, 1, "meeting")
 	if err != nil {
 		var resp model.Response
 		resp.Info = "TambahPoinLaporanbyPhoneNumber gagal"
 		resp.Response = err.Error()
-		at.WriteJSON(w, http.StatusExpectationFailed, resp)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(resp)
 	}
 
 	message := "*" + strings.TrimSpace(event.Summary) + "*\n" + lap.Kode + "\nLokasi:\n" + event.Location + "\nAgenda:\n" + event.Description + "\nTanggal: " + event.Date + "\nJam: " + event.TimeStart + " - " + event.TimeEnd + "\nNotulen : " + docuser.Name + "\nURL Input Risalah Pertemuan:\n" + "https://www.do.my.id/resume/#" + lap.ID.Hex()
@@ -497,43 +447,40 @@ func PostMeeting(w http.ResponseWriter, r *http.Request) {
 		IsGroup:  true,
 		Messages: message,
 	}
-	_, resp, err := atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
+	_, respAPI, err := atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
 	if err != nil {
-		resp.Info = "Tidak berhak"
-		resp.Response = err.Error()
-		at.WriteJSON(w, http.StatusUnauthorized, resp)
-		return
+		respn.Info = "Tidak berhak"
+		respn.Response = err.Error()
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
-	at.WriteJSON(w, http.StatusOK, lap)
+	_ = respAPI // Ignore respAPI since we don't return it
+	return c.Status(fiber.StatusOK).JSON(lap)
 }
 
-func PostLaporan(respw http.ResponseWriter, req *http.Request) {
+func PostLaporan(c *fiber.Ctx) error {
 	//otorisasi dan validasi inputan
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var lap model.Laporan
-	err = json.NewDecoder(req.Body).Decode(&lap)
+	err = c.BodyParser(&lap)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	if lap.Solusi == "" {
 		var respn model.Response
 		respn.Status = "Error : Telepon atau nama atau solusi tidak diisi"
 		respn.Response = "Isi lebih lengkap dahulu"
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	//check validasi user
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
@@ -541,8 +488,7 @@ func PostLaporan(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Error : Data user tidak di temukan: " + payload.Id
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	//ambil data project
 	prjobjectId, err := primitive.ObjectIDFromHex(lap.Kode)
@@ -552,16 +498,14 @@ func PostLaporan(respw http.ResponseWriter, req *http.Request) {
 		respn.Info = lap.Kode
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	prjuser, err := atdb.GetOneDoc[model.Project](config.Mongoconn, "project", primitive.M{"_id": prjobjectId})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data project tidak di temukan: " + lap.Kode
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	//lojik inputan post
 	lap.User = docuser
@@ -576,16 +520,14 @@ func PostLaporan(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Gagal Insert Database"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotModified, respn)
-		return
+		return c.Status(fiber.StatusNotModified).JSON(respn)
 	}
 	_, err = report.TambahPoinLaporanbyPhoneNumber(config.Mongoconn, prjuser, docuser.PhoneNumber, 1, "laporan")
 	if err != nil {
 		var resp model.Response
 		resp.Info = "TambahPoinPushRepobyGithubUsername gagal"
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusExpectationFailed, resp)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(resp)
 	}
 	message := "*Permintaan Feedback Pekerjaan*\n" + "Petugas : " + docuser.Name + "\nDeskripsi:" + lap.Solusi + "\n Beri Nilai: " + "https://www.do.my.id/rate/#" + idlap.Hex()
 	dt := &whatsauth.TextMessage{
@@ -593,44 +535,42 @@ func PostLaporan(respw http.ResponseWriter, req *http.Request) {
 		IsGroup:  false,
 		Messages: message,
 	}
-	_, resp, err := atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
+	_, respAPI, err := atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
 	if err != nil {
-		resp.Info = "Tidak berhak"
-		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusUnauthorized, resp)
-		return
+		var respn model.Response
+		respn.Info = "Tidak berhak"
+		respn.Response = err.Error()
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
-	at.WriteJSON(respw, http.StatusOK, lap)
+	_ = respAPI
+	return c.Status(fiber.StatusOK).JSON(lap)
 
 }
 
-func PostFeedback(respw http.ResponseWriter, req *http.Request) {
+func PostFeedback(c *fiber.Ctx) error {
 	//otorisasi dan validasi inputan
-	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeader(req))
+	payload, err := watoken.Decode(config.PublicKeyWhatsAuth, at.GetLoginFromHeaderFiber(c))
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Token Tidak Valid"
-		respn.Info = at.GetSecretFromHeader(req)
+		respn.Info = at.GetSecretFromHeaderFiber(c)
 		respn.Location = "Decode Token Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusForbidden, respn)
-		return
+		return c.Status(fiber.StatusForbidden).JSON(respn)
 	}
 	var lap model.Laporan
-	err = json.NewDecoder(req.Body).Decode(&lap)
+	err = c.BodyParser(&lap)
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Body tidak valid"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	if lap.Phone == "" || lap.Nama == "" || lap.Solusi == "" {
 		var respn model.Response
 		respn.Status = "Error : Telepon atau nama atau solusi tidak diisi"
 		respn.Response = "Isi lebih lengkap dahulu"
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	//validasi eksistensi user di db
 	docuser, err := atdb.GetOneDoc[model.Userdomyikado](config.Mongoconn, "user", primitive.M{"phonenumber": payload.Id})
@@ -638,8 +578,7 @@ func PostFeedback(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Error : Data user tidak di temukan"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	//ambil data project
 	prjobjectId, err := primitive.ObjectIDFromHex(lap.Kode)
@@ -649,16 +588,14 @@ func PostFeedback(respw http.ResponseWriter, req *http.Request) {
 		respn.Info = lap.Kode
 		respn.Location = "Encode Object ID Error"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusBadRequest, respn)
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(respn)
 	}
 	prjuser, err := atdb.GetOneDoc[model.Project](config.Mongoconn, "project", primitive.M{"_id": prjobjectId})
 	if err != nil {
 		var respn model.Response
 		respn.Status = "Error : Data project tidak di temukan: " + lap.Kode
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotImplemented, respn)
-		return
+		return c.Status(fiber.StatusNotImplemented).JSON(respn)
 	}
 	//lojik inputan post
 	lap.Project = prjuser
@@ -672,16 +609,14 @@ func PostFeedback(respw http.ResponseWriter, req *http.Request) {
 		var respn model.Response
 		respn.Status = "Gagal Insert Database"
 		respn.Response = err.Error()
-		at.WriteJSON(respw, http.StatusNotModified, respn)
-		return
+		return c.Status(fiber.StatusNotModified).JSON(respn)
 	}
 	_, err = report.TambahPoinLaporanbyPhoneNumber(config.Mongoconn, prjuser, docuser.PhoneNumber, 1, "feedback")
 	if err != nil {
 		var resp model.Response
 		resp.Info = "TambahPoinLaporanbyPhoneNumber gagal"
 		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusExpectationFailed, resp)
-		return
+		return c.Status(fiber.StatusExpectationFailed).JSON(resp)
 	}
 	message := "*Permintaan Feedback*\n" + "Petugas : " + docuser.Name + "\nDeskripsi:" + lap.Solusi + "\n Beri Nilai: " + "https://www.do.my.id/rate/#" + idlap.Hex()
 	dt := &whatsauth.TextMessage{
@@ -689,14 +624,15 @@ func PostFeedback(respw http.ResponseWriter, req *http.Request) {
 		IsGroup:  false,
 		Messages: message,
 	}
-	_, resp, err := atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
+	_, respAPI, err := atapi.PostStructWithToken[model.Response]("Token", config.WAAPIToken, dt, config.WAAPIMessage)
 	if err != nil {
-		resp.Info = "Tidak berhak"
-		resp.Response = err.Error()
-		at.WriteJSON(respw, http.StatusUnauthorized, resp)
-		return
+		var respn model.Response
+		respn.Info = "Tidak berhak"
+		respn.Response = err.Error()
+		return c.Status(fiber.StatusUnauthorized).JSON(respn)
 	}
-	at.WriteJSON(respw, http.StatusOK, lap)
+	_ = respAPI
+	return c.Status(fiber.StatusOK).JSON(lap)
 
 }
 

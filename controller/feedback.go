@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"encoding/json"
-	"net/http"
+	"errors"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/helper/atdb"
@@ -12,9 +13,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// ==========================================
-// HANDLER UNTUK FEEDBACK (Masukan User)
-// ==========================================
+// FeedbackHandler adalah Class (Struct) untuk mengelompokkan fitur Feedback
+type FeedbackHandler struct{}
 
 // InsertFeedback godoc
 // @Summary Mengirim Feedback (User Login)
@@ -28,56 +28,30 @@ import (
 // @Failure 401 {object} model.ResponseMessage
 // @Router /pdfm/feedback [post]
 // @Security BearerAuth
-func InsertFeedback(w http.ResponseWriter, r *http.Request) {
-	// 1. Setup Header (Standar CORS)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// 2. Cek siapa yang login (Sama seperti di history.go)
-	user, err := GetUserFromToken(r)
+func (h *FeedbackHandler) InsertFeedback(c *fiber.Ctx) error {
+	// 2. Cek siapa yang login
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 	}
 
 	// 3. Siapkan wadah data
 	var data model.Feedback
 
-	// 4. Decode data dari Frontend
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Data tidak valid"})
-		return
+	// 4. Decode data
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
 	}
 
-	// Validasi Pesan
 	if data.Message == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Pesan tidak boleh kosong"})
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Pesan tidak boleh kosong"})
 	}
 
-	// 5. Lengkapi data server-side
+	// 5. Lengkapi data
 	data.ID = primitive.NewObjectID()
 	data.CreatedAt = time.Now()
+	data.UserID = user.ID.Hex()
 
-	// 6. PENTING: Isi data diri otomatis dari Token (Biar aman & valid)
-	data.UserID = user.ID.Hex() // Simpan ID user
-
-	// Jika frontend tidak mengirim nama/email, pakai data dari akun login
 	if data.Name == "" {
 		data.Name = user.Name
 	}
@@ -85,23 +59,18 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 		data.Email = user.Email
 	}
 
-	// 7. Simpan ke database "feedback" pakai atdb helper
+	// 7. Simpan ke database
 	_, err = atdb.InsertOneDoc(config.Mongoconn, "feedback", data)
 	if err != nil {
-		http.Error(w, "Gagal menyimpan feedback: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan feedback: " + err.Error())
 	}
 
-	// 8. Beri respon sukses (Format sama persis dengan history.go)
-	json.NewEncoder(w).Encode(model.FeedbackResponse{
+	// 8. Respon sukses
+	return c.JSON(model.FeedbackResponse{
 		Message: "Terima kasih atas masukan Anda!",
 		ID:      data.ID,
 	})
 }
-
-// ==========================================
-// GET ALL FEEDBACK (Admin Only)
-// ==========================================
 
 // GetAllFeedback godoc
 // @Summary Melihat Semua Feedback (Admin Only)
@@ -114,46 +83,47 @@ func InsertFeedback(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {object} model.ResponseMessage
 // @Router /pdfm/feedback [get]
 // @Security BearerAuth
-func GetAllFeedback(w http.ResponseWriter, r *http.Request) {
-	// 1. Setup Header CORS
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// 2. Cek Admin Authentication
-	user, err := GetUserFromToken(r)
+func (h *FeedbackHandler) GetAllFeedback(c *fiber.Ctx) error {
+	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
 	}
 
-	// 3. Pastikan user adalah admin
 	if !user.IsAdmin {
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(model.ResponseMessage{Message: "Forbidden: Admin access required"})
-		return
+		return c.Status(fiber.StatusForbidden).JSON(model.ResponseMessage{Message: "Forbidden: Admin access required"})
 	}
 
-	// 4. Ambil semua feedback dari database
 	var feedbacks []model.Feedback
 	feedbacks, err = atdb.GetAllDoc[[]model.Feedback](config.Mongoconn, "feedback", bson.M{})
 	if err != nil {
-		http.Error(w, "Gagal mengambil data feedback: "+err.Error(), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).SendString("Gagal mengambil data feedback: " + err.Error())
 	}
 
-	// 5. Return data feedback
-	json.NewEncoder(w).Encode(feedbacks)
+	return c.JSON(feedbacks)
+}
+
+// Helper: GetUserFromToken untuk FeedbackHandler
+func (h *FeedbackHandler) GetUserFromToken(c *fiber.Ctx) (model.PdfmUsers, error) {
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return model.PdfmUsers{}, errors.New("token tidak ditemukan")
+	}
+
+	const bearerPrefix = "Bearer "
+	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+		return model.PdfmUsers{}, errors.New("format token salah")
+	}
+	token := authHeader[len(bearerPrefix):]
+
+	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+	if err != nil {
+		return model.PdfmUsers{}, err
+	}
+
+	if tokenData.ExpiresAt.Before(time.Now()) {
+		return model.PdfmUsers{}, errors.New("token sudah kadaluarsa")
+	}
+
+	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
+	return user, err
 }

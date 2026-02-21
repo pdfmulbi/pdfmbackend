@@ -1,35 +1,31 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gocroot/config"
-	"github.com/gocroot/helper/at"
 	"github.com/gocroot/helper/atapi"
 	"github.com/gocroot/helper/atdb"
 	"github.com/gocroot/helper/jualin"
 	"github.com/gocroot/model"
+	"github.com/gofiber/fiber/v2"
 )
 
 // Fungsi untuk menangani request order
-func HandleOrder(w http.ResponseWriter, r *http.Request) {
-	namalapak := at.GetParam(r)
+func HandleOrder(c *fiber.Ctx) error {
+	namalapak := c.Params("namalapak")
 	var orderRequest jualin.PaymentRequest
 
 	// Decode JSON request ke struct
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&orderRequest); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&orderRequest); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Bad request")
 	}
+
 	_, err := atdb.InsertOneDoc(config.Mongoconn, "order", orderRequest)
 	if err != nil {
-		http.Error(w, "Insert Database Gagal", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Insert Database Gagal")
 	}
 
 	//kirim pesan ke tenant
@@ -41,16 +37,14 @@ func HandleOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	_, _, err = atapi.PostStructWithToken[model.Response]("token", config.WAAPIToken, newmsg, config.WAAPIMessage)
 	if err != nil {
-		http.Error(w, "Gagal Mengirim pesan", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusBadRequest).SendString("Gagal Mengirim pesan")
 	}
 	// Cetak data order ke terminal (bisa diganti dengan logic lain, misal menyimpan ke database)
 	fmt.Printf("Received Order: %+v\n", orderRequest)
 
 	// Kirim response kembali ke client
-	w.Header().Set("Content-Type", "application/json")
 	response := map[string]string{"status": "success", "message": "Order received"}
-	json.NewEncoder(w).Encode(response)
+	return c.JSON(response)
 }
 
 // Fungsi untuk membuat pesan dari orders
