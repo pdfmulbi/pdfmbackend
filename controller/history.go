@@ -243,7 +243,7 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 	}
 
 	// Menggunakan model 1.5-flash
-	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey
+	url := "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + apiKey
 	prompt := "Rangkum teks dokumen berikut secara profesional dalam poin-poin penting menggunakan Bahasa Indonesia: " + req.Content
 	
 	payload := map[string]interface{}{
