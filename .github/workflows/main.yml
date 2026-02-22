@@ -34,7 +34,7 @@ jobs:
             --runtime=go122 \
             --trigger-http \
             --timeout=540s \
-            --set-env-vars MONGOSTRING='${{ secrets.MONGOSTRING }}',PHONENUMBER='${{ secrets.PHONENUMBER }}'
+            --set-env-vars MONGOSTRING='${{ secrets.MONGOSTRING }}',PHONENUMBER='${{ secrets.PHONENUMBER }}',GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}'
       - name: 'Cek eksistensi fungsi'
         run: 'gcloud functions describe pdfmerger --region=asia-southeast2'
       - name: 'Cek log debugging'
