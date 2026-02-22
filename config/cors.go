@@ -12,8 +12,8 @@ var Origins = []string{
 	"https://www.bukupedia.co.id",
 	"https://naskah.bukupedia.co.id",
 	"https://bukupedia.co.id",
-	"https://pdfmulbi.github.io",
-	"http://127.0.0.1:5500",
+	"https://pdfmulbi.github.io", // Domain GitHub Pages Anda
+	"http://127.0.0.1:5500",      // Live Server VS Code
 	"http://localhost:5500",
 }
 
@@ -33,39 +33,33 @@ func isAllowedOrigin(origin string) bool {
 	return false
 }
 
-// Fungsi untuk mengatur header CORS sebagai Fiber Middleware
+// CorsMiddleware mengatur header CORS agar aplikasi frontend bisa mengakses backend
 func CorsMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		origin := c.Get("Origin")
 		normalizedOrigin := normalizeOrigin(origin)
 
-		// Log origin untuk debugging
+		// Log origin untuk memudahkan debugging di Cloud Logs
 		log.Printf("Incoming request from Origin: %s", origin)
 
 		if isAllowedOrigin(normalizedOrigin) {
-			// Tambahkan header Vary untuk cache
+			// PERBAIKAN: Gunakan 'origin' (dinamis), BUKAN "*" jika menggunakan Credentials
+			c.Set("Access-Control-Allow-Origin", origin)
+			c.Set("Access-Control-Allow-Credentials", "true")
+			c.Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
+			c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
 			c.Set("Vary", "Origin")
 
 			// Tangani preflight request (OPTIONS)
 			if c.Method() == fiber.MethodOptions {
-				c.Set("Access-Control-Allow-Credentials", "true")
-				c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
-				c.Set("Access-Control-Allow-Methods", "POST, GET, DELETE, PUT, OPTIONS")
-				c.Set("Access-Control-Allow-Origin", "*")
 				c.Set("Access-Control-Max-Age", "3600")
 				return c.SendStatus(fiber.StatusNoContent)
 			}
 
-			// Header untuk permintaan utama
-			c.Set("Access-Control-Allow-Credentials", "true")
-			c.Set("Access-Control-Allow-Origin", "*")
-			c.Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
-			c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
-
 			return c.Next()
 		}
 
-		// Jika origin tidak diizinkan, tetap lanjutkan secara normal tapi tanpa header CORS
+		// Jika origin tidak diizinkan, tetap lanjutkan tanpa header CORS tambahan
 		return c.Next()
 	}
 }
