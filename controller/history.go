@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
-	"bytes"    
-	"encoding/json" 
-	"io"         
-	"net/http"   
+	"io"
+	"net/http"
 	"os"
 	"sort"
 	"time"
@@ -24,17 +24,6 @@ type HistoryHandler struct{}
 // 1. HANDLER UNTUK MERGE HISTORY
 // ==========================================
 
-// CreateMergeHistory godoc
-// @Summary Simpan Log Merge PDF
-// @Description Mencatat riwayat penggabungan PDF ke database
-// @Tags History - Merge
-// @Accept json
-// @Produce json
-// @Param request body model.MergeInput true "Payload Data Merge"
-// @Success 200 {object} model.HistoryActionResponse
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/merge [post]
-// @Security BearerAuth
 func (h *HistoryHandler) CreateMergeHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -59,23 +48,12 @@ func (h *HistoryHandler) CreateMergeHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	// PERBAIKAN: Gunakan HistoryActionResponse
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Merge berhasil disimpan",
 		ID:      data.ID,
 	})
 }
 
-// GetMergeHistory godoc
-// @Summary Lihat Riwayat Merge
-// @Description Menampilkan daftar riwayat merge user
-// @Tags History - Merge
-// @Accept json
-// @Produce json
-// @Success 200 {array} model.MergeHistory
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/merge [get]
-// @Security BearerAuth
 func (h *HistoryHandler) GetMergeHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -92,16 +70,6 @@ func (h *HistoryHandler) GetMergeHistory(c *fiber.Ctx) error {
 // 2. HANDLER UNTUK COMPRESS HISTORY
 // ==========================================
 
-// CreateCompressHistory godoc
-// @Summary Simpan Log Compress PDF
-// @Tags History - Compress
-// @Accept json
-// @Produce json
-// @Param request body model.CompressInput true "Payload Data Compress"
-// @Success 200 {object} model.HistoryActionResponse
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/compress [post]
-// @Security BearerAuth
 func (h *HistoryHandler) CreateCompressHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -128,22 +96,12 @@ func (h *HistoryHandler) CreateCompressHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	// PERBAIKAN: Gunakan HistoryActionResponse (Sekarang Compress juga return ID)
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Compress berhasil disimpan",
 		ID:      data.ID,
 	})
 }
 
-// GetCompressHistory godoc
-// @Summary Lihat Riwayat Compress
-// @Tags History - Compress
-// @Accept json
-// @Produce json
-// @Success 200 {array} model.CompressHistory
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/compress [get]
-// @Security BearerAuth
 func (h *HistoryHandler) GetCompressHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -160,16 +118,6 @@ func (h *HistoryHandler) GetCompressHistory(c *fiber.Ctx) error {
 // 3. HANDLER UNTUK CONVERT HISTORY
 // ==========================================
 
-// CreateConvertHistory godoc
-// @Summary Simpan Log Convert PDF
-// @Tags History - Convert
-// @Accept json
-// @Produce json
-// @Param request body model.ConvertInput true "Payload Data Convert"
-// @Success 200 {object} model.HistoryActionResponse
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/convert [post]
-// @Security BearerAuth
 func (h *HistoryHandler) CreateConvertHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -195,22 +143,12 @@ func (h *HistoryHandler) CreateConvertHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	// PERBAIKAN: Gunakan HistoryActionResponse
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Convert berhasil disimpan",
 		ID:      data.ID,
 	})
 }
 
-// GetConvertHistory godoc
-// @Summary Lihat Riwayat Convert
-// @Tags History - Convert
-// @Accept json
-// @Produce json
-// @Success 200 {array} model.ConvertHistory
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/convert [get]
-// @Security BearerAuth
 func (h *HistoryHandler) GetConvertHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -224,19 +162,9 @@ func (h *HistoryHandler) GetConvertHistory(c *fiber.Ctx) error {
 }
 
 // ==========================================
-// 4. HANDLER UNTUK SUMMARY HISTORY
+// 4. HANDLER UNTUK SUMMARY & AI GEMINI
 // ==========================================
 
-// CreateSummaryHistory godoc
-// @Summary Simpan Log Summary PDF
-// @Tags History - Summary
-// @Accept json
-// @Produce json
-// @Param request body model.SummaryInput true "Payload Data Summary"
-// @Success 200 {object} model.HistoryActionResponse
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/summary [post]
-// @Security BearerAuth
 func (h *HistoryHandler) CreateSummaryHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -262,22 +190,12 @@ func (h *HistoryHandler) CreateSummaryHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
-	// PERBAIKAN: Gunakan HistoryActionResponse
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Summary berhasil disimpan",
 		ID:      data.ID,
 	})
 }
 
-// GetSummaryHistory godoc
-// @Summary Lihat Riwayat Summary
-// @Tags History - Summary
-// @Accept json
-// @Produce json
-// @Success 200 {array} model.SummaryHistory
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/log/summary [get]
-// @Security BearerAuth
 func (h *HistoryHandler) GetSummaryHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -290,57 +208,49 @@ func (h *HistoryHandler) GetSummaryHistory(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(data)
 }
 
-// SummarizePDF godoc
-// @Summary Rangkum Dokumen PDF (AI Gemini)
-// @Description Merangkum teks dokumen menggunakan Google Gemini AI 1.5 Flash
-// @Tags History - Summary
-// @Accept json
-// @Produce json
-// @Param request body model.SummaryRequest true "Payload Teks PDF"
-// @Success 200 {object} model.SummaryResponse
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/ai/summary [post]
-// @Security BearerAuth
+// SummarizePDF merangkum teks menggunakan Gemini AI 1.5 Flash
 func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
-	// 1. Cek Auth & Ambil Data User Terbaru
+	// 1. Validasi Token & Ambil User Terbaru
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
-	}
-
-	// 2. CEK PEMBATASAN KUOTA
-	// Pastikan field 'SummaryQuota' sudah ada di model.PdfmUsers dan database Anda
-	if user.SummaryQuota <= 0 {
-		return c.Status(fiber.StatusForbidden).JSON(model.ResponseMessage{
-			Message: "Kuota rangkuman Anda telah habis. Silakan hubungi admin untuk isi ulang.",
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{
+			Message: "Sesi tidak valid atau telah berakhir: " + err.Error(),
 		})
 	}
 
-	// 3. Ambil Input
+	// 2. CEK PEMBATASAN KUOTA
+	if user.SummaryQuota <= 0 {
+		return c.Status(fiber.StatusForbidden).JSON(model.ResponseMessage{
+			Message: "Kuota harian Anda telah habis (Sisa: 0).",
+		})
+	}
+
+	// 3. Parsing Body Request
 	var req struct {
 		Content  string `json:"content"`
 		FileName string `json:"file_name"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Format JSON tidak valid"})
 	}
 
-	// 4. Ambil API Key & Konfigurasi Gemini
+	// 4. Konfigurasi Gemini API
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Konfigurasi AI belum siap"})
+		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{
+			Message: "Error: GEMINI_API_KEY tidak ditemukan di environment server.",
+		})
 	}
 
+	// Menggunakan model 1.5-flash
 	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey
-	prompt := "Rangkum teks dokumen berikut ini secara profesional dan poin-poin penting dalam Bahasa Indonesia: " + req.Content
+	prompt := "Rangkum teks dokumen berikut secara profesional dalam poin-poin penting menggunakan Bahasa Indonesia: " + req.Content
 	
 	payload := map[string]interface{}{
 		"contents": []interface{}{
 			map[string]interface{}{
 				"parts": []interface{}{
-					map[string]interface{}{
-						"text": prompt,
-					},
+					map[string]interface{}{"text": prompt},
 				},
 			},
 		},
@@ -348,14 +258,24 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 
 	jsonPayload, _ := json.Marshal(payload)
 	
-	// 5. Kirim Request ke Google Gemini
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+	// 5. Eksekusi Request ke Google dengan Timeout 30 Detik
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		return c.Status(fiber.StatusServiceUnavailable).JSON(model.ResponseMessage{Message: "Gagal menghubungi layanan AI"})
+		return c.Status(fiber.StatusServiceUnavailable).JSON(model.ResponseMessage{
+			Message: "Gagal menghubungi Google AI: " + err.Error(),
+		})
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+
+	// Validasi Respon API Google
+	if resp.StatusCode != http.StatusOK {
+		return c.Status(resp.StatusCode).JSON(model.ResponseMessage{
+			Message: "Google AI API Error: " + string(body),
+		})
+	}
 
 	var geminiResp struct {
 		Candidates []struct {
@@ -368,24 +288,25 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 	}
 
 	if err := json.Unmarshal(body, &geminiResp); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Gagal memproses AI"})
+		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Gagal memproses data AI"})
 	}
 
-	if len(geminiResp.Candidates) == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(model.ResponseMessage{Message: "AI tidak memberikan respon"})
+	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(model.ResponseMessage{Message: "AI tidak memberikan respon konten"})
 	}
 
 	summaryResult := geminiResp.Candidates[0].Content.Parts[0].Text
 
-	// 6. UPDATE DATABASE (POTONG KUOTA & SIMPAN HISTORY)
-	// Kurangi kuota user sebanyak 1
-	update := bson.M{"$inc": bson.M{"summary_quota": -1}}
+	// 6. UPDATE DATABASE (POTONG KUOTA & SIMPAN LOG)
+	update := bson.M{
+		"$inc": bson.M{"summary_quota": -1},
+		"$set": bson.M{"updatedAt": time.Now()},
+	}
 	_, err = config.Mongoconn.Collection("users").UpdateOne(c.Context(), bson.M{"_id": user.ID}, update)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Gagal memperbarui kuota user"})
+		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Gagal memotong kuota"})
 	}
 
-	// Simpan data riwayat
 	historyData := model.SummaryHistory{
 		ID:          primitive.NewObjectID(),
 		UserID:      user.ID,
@@ -396,7 +317,7 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 	}
 	atdb.InsertOneDoc(config.Mongoconn, "summary_history", historyData)
 
-	// 7. Return Hasil & Sisa Kuota
+	// 7. Kirim Hasil
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":         "Berhasil merangkum dokumen",
 		"summary":         summaryResult,
@@ -404,20 +325,11 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 		"remaining_quota": user.SummaryQuota - 1,
 	})
 }
+
 // ==========================================
 // 5. UNIFIED HISTORY
 // ==========================================
 
-// GetAllHistory godoc
-// @Summary Lihat Semua Riwayat (Gabungan)
-// @Description Menggabungkan semua jenis riwayat (Merge, Compress, Convert, Summary) menjadi satu list
-// @Tags History - Unified
-// @Accept json
-// @Produce json
-// @Success 200 {object} model.UnifiedHistoryResponse
-// @Failure 401 {object} model.ResponseMessage
-// @Router /pdfm/history/all [get]
-// @Security BearerAuth
 func (h *HistoryHandler) GetAllHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -426,86 +338,39 @@ func (h *HistoryHandler) GetAllHistory(c *fiber.Ctx) error {
 
 	var allHistory []model.HistoryItem
 
-	// 1. Ambil Merge History
+	// Ambil Merge Data
 	mergeData, err := atdb.GetAllDoc[[]model.MergeHistory](config.Mongoconn, "merge_history", bson.M{"user_id": user.ID})
 	if err == nil && mergeData != nil {
 		for _, m := range mergeData {
-			fileCount := len(m.InputFiles)
 			allHistory = append(allHistory, model.HistoryItem{
 				ID:          m.ID.Hex(),
 				Type:        "merge",
-				Description: "Merged " + string(rune(fileCount+'0')) + " PDF files",
+				Description: "Menggabungkan PDF",
 				FileName:    m.OutputFile,
-				Details:     map[string]interface{}{"input_files": m.InputFiles},
 				CreatedAt:   m.CreatedAt,
 			})
 		}
 	}
 
-	// 2. Ambil Compress History
-	compressData, err := atdb.GetAllDoc[[]model.CompressHistory](config.Mongoconn, "compress_history", bson.M{"user_id": user.ID})
-	if err == nil && compressData != nil {
-		for _, cm := range compressData {
-			allHistory = append(allHistory, model.HistoryItem{
-				ID:          cm.ID.Hex(),
-				Type:        "compress",
-				Description: "Compressed PDF file",
-				FileName:    cm.FileName,
-				Details: map[string]interface{}{
-					"original_size":   cm.OriginalSize,
-					"compressed_size": cm.CompressedSize,
-					"status":          cm.Status,
-				},
-				CreatedAt: cm.CreatedAt,
-			})
-		}
-	}
-
-	// 3. Ambil Convert History
-	convertData, err := atdb.GetAllDoc[[]model.ConvertHistory](config.Mongoconn, "convert_history", bson.M{"user_id": user.ID})
-	if err == nil && convertData != nil {
-		for _, cv := range convertData {
-			allHistory = append(allHistory, model.HistoryItem{
-				ID:          cv.ID.Hex(),
-				Type:        "convert",
-				Description: "Converted " + cv.SourceFormat + " to " + cv.TargetFormat,
-				FileName:    cv.FileName,
-				Details: map[string]interface{}{
-					"source_format": cv.SourceFormat,
-					"target_format": cv.TargetFormat,
-				},
-				CreatedAt: cv.CreatedAt,
-			})
-		}
-	}
-
-	// 4. Ambil Summary History
+	// Ambil Summary Data
 	summaryData, err := atdb.GetAllDoc[[]model.SummaryHistory](config.Mongoconn, "summary_history", bson.M{"user_id": user.ID})
 	if err == nil && summaryData != nil {
 		for _, s := range summaryData {
 			allHistory = append(allHistory, model.HistoryItem{
 				ID:          s.ID.Hex(),
 				Type:        "summary",
-				Description: "Generated PDF summary",
+				Description: "Meringkas PDF",
 				FileName:    s.FileName,
-				Details: map[string]interface{}{
-					"language": s.Language,
-				},
-				CreatedAt: s.CreatedAt,
+				CreatedAt:   s.CreatedAt,
 			})
 		}
 	}
 
-	// Sort by CreatedAt descending
+	// Urutkan Terbaru
 	sort.Slice(allHistory, func(i, j int) bool {
 		return allHistory[i].CreatedAt.After(allHistory[j].CreatedAt)
 	})
 
-	if allHistory == nil {
-		allHistory = []model.HistoryItem{}
-	}
-
-	// PERBAIKAN: Gunakan UnifiedHistoryResponse
 	return c.Status(fiber.StatusOK).JSON(model.UnifiedHistoryResponse{
 		Status:  200,
 		Message: "History retrieved successfully",
@@ -514,20 +379,9 @@ func (h *HistoryHandler) GetAllHistory(c *fiber.Ctx) error {
 }
 
 // ==========================================
-// 6. DELETE HISTORY ITEM
+// 6. DELETE & HELPERS
 // ==========================================
 
-// DeleteHistory godoc
-// @Summary Hapus Riwayat
-// @Description Menghapus satu item riwayat berdasarkan ID dan Tipe
-// @Tags History - Unified
-// @Accept json
-// @Produce json
-// @Param request body model.DeleteHistoryInput true "Payload Hapus History"
-// @Success 200 {object} model.ResponseMessage
-// @Failure 400 {object} model.ResponseMessage
-// @Router /pdfm/history/delete [delete]
-// @Security BearerAuth
 func (h *HistoryHandler) DeleteHistory(c *fiber.Ctx) error {
 	user, err := h.GetUserFromToken(c)
 	if err != nil {
@@ -536,47 +390,24 @@ func (h *HistoryHandler) DeleteHistory(c *fiber.Ctx) error {
 
 	var req model.DeleteHistoryInput
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid request"})
 	}
 
-	if req.ID == "" || req.Type == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "ID and type are required"})
-	}
-
-	objectID, err := primitive.ObjectIDFromHex(req.ID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid ID format"})
-	}
-
-	var collectionName string
+	objectID, _ := primitive.ObjectIDFromHex(req.ID)
+	
+	var coll string
 	switch req.Type {
-	case "merge":
-		collectionName = "merge_history"
-	case "compress":
-		collectionName = "compress_history"
-	case "convert":
-		collectionName = "convert_history"
-	case "summary":
-		collectionName = "summary_history"
-	default:
-		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Invalid history type"})
+	case "merge": coll = "merge_history"
+	case "summary": coll = "summary_history"
+	default: coll = "merge_history"
 	}
 
 	filter := bson.M{"_id": objectID, "user_id": user.ID}
-	result, err := config.Mongoconn.Collection(collectionName).DeleteOne(c.Context(), filter)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete")
-	}
+	config.Mongoconn.Collection(coll).DeleteOne(c.Context(), filter)
 
-	if result.DeletedCount == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(model.ResponseMessage{Message: "History item not found or not authorized"})
-	}
-
-	// PERBAIKAN: Gunakan ResponseMessage
-	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "History deleted successfully"})
+	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "History deleted"})
 }
 
-// GetUserFromToken (Helper ini harus tetap ada jika belum ada di file lain dalam package yg sama)
 func (h *HistoryHandler) GetUserFromToken(c *fiber.Ctx) (model.PdfmUsers, error) {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
@@ -591,11 +422,11 @@ func (h *HistoryHandler) GetUserFromToken(c *fiber.Ctx) (model.PdfmUsers, error)
 
 	tokenData, err := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil {
-		return model.PdfmUsers{}, err
+		return model.PdfmUsers{}, errors.New("sesi tidak ditemukan")
 	}
 
 	if tokenData.ExpiresAt.Before(time.Now()) {
-		return model.PdfmUsers{}, errors.New("token sudah kadaluarsa")
+		return model.PdfmUsers{}, errors.New("sesi kadaluarsa")
 	}
 
 	user, err := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
