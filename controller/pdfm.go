@@ -87,7 +87,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	}
 
 	now := time.Now()
-    if user.UpdatedAt.Before(time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())) {
+    if user.UpdatedAt.Year() != now.Year() || user.UpdatedAt.Month() != now.Month() || user.UpdatedAt.Day() != now.Day() {
         // Jika login terakhir adalah kemarin atau lebih lama, reset kuota ke 10
         user.SummaryQuota = 10
         update := bson.M{
