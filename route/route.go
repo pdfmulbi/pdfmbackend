@@ -189,6 +189,7 @@ func RegisterRoutes(app *fiber.App) {
 	// 4. Summary Logs
 	app.Post("/pdfm/log/summary", historyHandler.CreateSummaryHistory)
 	app.Get("/pdfm/log/summary", historyHandler.GetSummaryHistory)
+	app.Post("/pdfm/ai/summary", historyHandler.SummarizePDF)
 
 	// 5. All History (Combined)
 	app.Get("/pdfm/history/all", historyHandler.GetAllHistory)
