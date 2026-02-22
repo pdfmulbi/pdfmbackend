@@ -44,7 +44,8 @@ func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 		ID:        primitive.NewObjectID(),
 		Name:      req.Name,
 		Email:     req.Email,
-		Password:  req.Password, // TODO: Hash password ini untuk keamanan!
+		Password:  req.Password,// TODO: Hash password ini untuk keamanan!
+		SummaryQuota: 10, 
 		IsAdmin:   false,
 		IsSupport: false,
 		CreatedAt: time.Now(),
@@ -85,6 +86,19 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("Email atau password salah")
 	}
 
+	now := time.Now()
+    if user.UpdatedAt.Before(time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())) {
+        // Jika login terakhir adalah kemarin atau lebih lama, reset kuota ke 10
+        user.SummaryQuota = 10
+        update := bson.M{
+            "$set": bson.M{
+                "summary_quota": 10,
+                "updatedAt":     now,
+            },
+        }
+        atdb.UpdateOneDoc(config.Mongoconn, "users", bson.M{"_id": user.ID}, update)
+    }
+	
 	// Buat token unik (UUID)
 	token := uuid.New().String()
 	expiresAt := time.Now().Add(24 * time.Hour)
@@ -264,6 +278,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		Name:      req.Name,
 		Email:     req.Email,
 		Password:  req.Password,
+		SummaryQuota: 10,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

@@ -2,6 +2,11 @@ package controller
 
 import (
 	"errors"
+	"bytes"    
+	"encoding/json" 
+	"io"         
+	"net/http"   
+	"os"
 	"sort"
 	"time"
 
@@ -285,6 +290,120 @@ func (h *HistoryHandler) GetSummaryHistory(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(data)
 }
 
+// SummarizePDF godoc
+// @Summary Rangkum Dokumen PDF (AI Gemini)
+// @Description Merangkum teks dokumen menggunakan Google Gemini AI 1.5 Flash
+// @Tags History - Summary
+// @Accept json
+// @Produce json
+// @Param request body model.SummaryRequest true "Payload Teks PDF"
+// @Success 200 {object} model.SummaryResponse
+// @Failure 401 {object} model.ResponseMessage
+// @Router /pdfm/ai/summary [post]
+// @Security BearerAuth
+func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
+	// 1. Cek Auth & Ambil Data User Terbaru
+	user, err := h.GetUserFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(model.ResponseMessage{Message: "Unauthorized: " + err.Error()})
+	}
+
+	// 2. CEK PEMBATASAN KUOTA
+	// Pastikan field 'SummaryQuota' sudah ada di model.PdfmUsers dan database Anda
+	if user.SummaryQuota <= 0 {
+		return c.Status(fiber.StatusForbidden).JSON(model.ResponseMessage{
+			Message: "Kuota rangkuman Anda telah habis. Silakan hubungi admin untuk isi ulang.",
+		})
+	}
+
+	// 3. Ambil Input
+	var req struct {
+		Content  string `json:"content"`
+		FileName string `json:"file_name"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(model.ResponseMessage{Message: "Data tidak valid"})
+	}
+
+	// 4. Ambil API Key & Konfigurasi Gemini
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Konfigurasi AI belum siap"})
+	}
+
+	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey
+	prompt := "Rangkum teks dokumen berikut ini secara profesional dan poin-poin penting dalam Bahasa Indonesia: " + req.Content
+	
+	payload := map[string]interface{}{
+		"contents": []interface{}{
+			map[string]interface{}{
+				"parts": []interface{}{
+					map[string]interface{}{
+						"text": prompt,
+					},
+				},
+			},
+		},
+	}
+
+	jsonPayload, _ := json.Marshal(payload)
+	
+	// 5. Kirim Request ke Google Gemini
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(model.ResponseMessage{Message: "Gagal menghubungi layanan AI"})
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var geminiResp struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
+
+	if err := json.Unmarshal(body, &geminiResp); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Gagal memproses AI"})
+	}
+
+	if len(geminiResp.Candidates) == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(model.ResponseMessage{Message: "AI tidak memberikan respon"})
+	}
+
+	summaryResult := geminiResp.Candidates[0].Content.Parts[0].Text
+
+	// 6. UPDATE DATABASE (POTONG KUOTA & SIMPAN HISTORY)
+	// Kurangi kuota user sebanyak 1
+	update := bson.M{"$inc": bson.M{"summary_quota": -1}}
+	_, err = config.Mongoconn.Collection("users").UpdateOne(c.Context(), bson.M{"_id": user.ID}, update)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(model.ResponseMessage{Message: "Gagal memperbarui kuota user"})
+	}
+
+	// Simpan data riwayat
+	historyData := model.SummaryHistory{
+		ID:          primitive.NewObjectID(),
+		UserID:      user.ID,
+		FileName:    req.FileName,
+		SummaryText: summaryResult,
+		Language:    "Indonesian",
+		CreatedAt:   time.Now(),
+	}
+	atdb.InsertOneDoc(config.Mongoconn, "summary_history", historyData)
+
+	// 7. Return Hasil & Sisa Kuota
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":         "Berhasil merangkum dokumen",
+		"summary":         summaryResult,
+		"id":              historyData.ID,
+		"remaining_quota": user.SummaryQuota - 1,
+	})
+}
 // ==========================================
 // 5. UNIFIED HISTORY
 // ==========================================
