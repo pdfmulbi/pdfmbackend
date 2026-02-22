@@ -24,7 +24,7 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v2'
       - name: 'Use gcloud CLI'
         run: 'gcloud info'
-      - name: 'Deploy a gen 2 cloud function'
+    - name: 'Deploy a gen 2 cloud function'
         run: |
           gcloud functions deploy pdfmerger \
             --region=asia-southeast2 \
@@ -34,7 +34,7 @@ jobs:
             --runtime=go122 \
             --trigger-http \
             --timeout=540s \
-            --set-env-vars MONGOSTRING='${{ secrets.MONGOSTRING }}',PHONENUMBER='${{ secrets.PHONENUMBER }}',GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}'
+            --set-env-vars MONGOSTRING='${{ secrets.MONGOSTRING }}',GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}'
       - name: 'Cek eksistensi fungsi'
         run: 'gcloud functions describe pdfmerger --region=asia-southeast2'
       - name: 'Cek log debugging'
