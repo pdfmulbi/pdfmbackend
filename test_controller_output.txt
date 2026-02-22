@@ -1,2 +1,0 @@
-exit status 0xc000013a
-FAIL	github.com/gocroot/controller	49.789s
