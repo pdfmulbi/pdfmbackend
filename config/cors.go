@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,25 +36,17 @@ func CorsMiddleware() fiber.Handler {
 		origin := c.Get("Origin")
 		normalizedOrigin := normalizeOrigin(origin)
 
-		// Log untuk debugging di Cloud Console
-		log.Printf("Incoming request from Origin: %s", origin)
-
 		if isAllowedOrigin(normalizedOrigin) {
-			// PERBAIKAN: Gunakan 'origin' dinamis, BUKAN "*" jika memakai Credentials
-			c.Set("Access-Control-Allow-Origin", origin)
+			c.Set("Access-Control-Allow-Origin", origin) // Set dinamis
 			c.Set("Access-Control-Allow-Credentials", "true")
 			c.Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
 			c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Login")
 			c.Set("Vary", "Origin")
 
-			// Tangani preflight request (OPTIONS)
 			if c.Method() == fiber.MethodOptions {
-				c.Set("Access-Control-Max-Age", "3600")
 				return c.SendStatus(fiber.StatusNoContent)
 			}
-			return c.Next()
 		}
-
 		return c.Next()
 	}
 }
