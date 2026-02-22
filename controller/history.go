@@ -48,6 +48,20 @@ func (h *HistoryHandler) CreateMergeHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
+	// Activity Log
+	go func() {
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			Activity:  "merge",
+			Details:   "Merge PDF: " + data.OutputFile,
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
+	}()
+
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Merge berhasil disimpan",
 		ID:      data.ID,
@@ -96,6 +110,20 @@ func (h *HistoryHandler) CreateCompressHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
+	// Activity Log
+	go func() {
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			Activity:  "compress",
+			Details:   "Compress PDF: " + data.FileName,
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
+	}()
+
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Compress berhasil disimpan",
 		ID:      data.ID,
@@ -143,6 +171,20 @@ func (h *HistoryHandler) CreateConvertHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
 
+	// Activity Log
+	go func() {
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			Activity:  "convert",
+			Details:   "Convert: " + data.SourceFormat + " → " + data.TargetFormat,
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
+	}()
+
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Convert berhasil disimpan",
 		ID:      data.ID,
@@ -189,6 +231,20 @@ func (h *HistoryHandler) CreateSummaryHistory(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data")
 	}
+
+	// Activity Log
+	go func() {
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			Activity:  "summary",
+			Details:   "Summary PDF: " + data.FileName,
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
+	}()
 
 	return c.Status(fiber.StatusOK).JSON(model.HistoryActionResponse{
 		Message: "Log Summary berhasil disimpan",
@@ -245,7 +301,7 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 	// Menggunakan model 1.5-flash
 	url := "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" + apiKey
 	prompt := "Rangkum teks dokumen berikut secara profesional dalam poin-poin penting menggunakan Bahasa Indonesia: " + req.Content
-	
+
 	payload := map[string]interface{}{
 		"contents": []interface{}{
 			map[string]interface{}{
@@ -257,7 +313,7 @@ func (h *HistoryHandler) SummarizePDF(c *fiber.Ctx) error {
 	}
 
 	jsonPayload, _ := json.Marshal(payload)
-	
+
 	// 5. Eksekusi Request ke Google dengan Timeout 30 Detik
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
@@ -394,12 +450,15 @@ func (h *HistoryHandler) DeleteHistory(c *fiber.Ctx) error {
 	}
 
 	objectID, _ := primitive.ObjectIDFromHex(req.ID)
-	
+
 	var coll string
 	switch req.Type {
-	case "merge": coll = "merge_history"
-	case "summary": coll = "summary_history"
-	default: coll = "merge_history"
+	case "merge":
+		coll = "merge_history"
+	case "summary":
+		coll = "summary_history"
+	default:
+		coll = "merge_history"
 	}
 
 	filter := bson.M{"_id": objectID, "user_id": user.ID}

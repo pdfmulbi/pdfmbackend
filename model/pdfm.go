@@ -49,15 +49,32 @@ type LoginLog struct {
 	LoginAt   time.Time          `bson:"login_at" json:"login_at"`
 }
 
+type ActivityLog struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	UserID    primitive.ObjectID `bson:"user_id" json:"user_id"`
+	Name      string             `bson:"name" json:"name"`
+	Email     string             `bson:"email" json:"email"`
+	Activity  string             `bson:"activity" json:"activity"`
+	Details   string             `bson:"details,omitempty" json:"details,omitempty"`
+	IPAddress string             `bson:"ip_address,omitempty" json:"ip_address,omitempty"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+}
+
 type Token struct {
 	Token     string    `bson:"token"`
 	Email     string    `bson:"email"`
 	ExpiresAt time.Time `bson:"expiresAt"`
 }
 
-//================================================//
-// 					Untuk SWAGGER
-//================================================//
+type DeleteInvoiceInput struct {
+	ID string `json:"id" example:"65a423..."`
+}
+
+// ================================================//
+//
+//	Untuk SWAGGER
+//
+// ================================================//
 type RegisterInput struct {
 	Name     string `json:"name" example:"pipo"`
 	Email    string `json:"email" example:"example@gmail.com"`

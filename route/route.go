@@ -6,7 +6,6 @@ import (
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/controller"
-	
 
 	_ "github.com/gocroot/docs"
 )
@@ -200,6 +199,12 @@ func RegisterRoutes(app *fiber.App) {
 	// Feedback (Kotak Saran / Contact Us)
 	app.Post("/pdfm/feedback", feedbackHandler.InsertFeedback)
 	app.Get("/pdfm/feedback", feedbackHandler.GetAllFeedback)
+
+	// Admin Dashboard (Donasi & Activity Logs)
+	adminHandler := &controller.AdminHandler{}
+	app.Get("/pdfm/admin/invoices", adminHandler.GetAllInvoicesAdmin)
+	app.Delete("/pdfm/admin/invoices", adminHandler.DeleteInvoiceAdmin)
+	app.Get("/pdfm/admin/activity-logs", adminHandler.GetActivityLogs)
 
 	// Google Auth
 	app.Post("/auth/users", controller.Auth)

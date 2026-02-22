@@ -41,15 +41,15 @@ func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 
 	// Mapping ke struct database
 	registrationData := model.PdfmUsers{
-		ID:        primitive.NewObjectID(),
-		Name:      req.Name,
-		Email:     req.Email,
-		Password:  req.Password,// TODO: Hash password ini untuk keamanan!
-		SummaryQuota: 10, 
-		IsAdmin:   false,
-		IsSupport: false,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:           primitive.NewObjectID(),
+		Name:         req.Name,
+		Email:        req.Email,
+		Password:     req.Password, // TODO: Hash password ini untuk keamanan!
+		SummaryQuota: 10,
+		IsAdmin:      false,
+		IsSupport:    false,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	// Simpan data ke database
@@ -57,6 +57,21 @@ func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data: " + err.Error())
 	}
+
+	// Log Activity
+	go func() {
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    registrationData.ID,
+			Name:      registrationData.Name,
+			Email:     registrationData.Email,
+			Activity:  "register",
+			Details:   "User mendaftar akun baru",
+			IPAddress: c.IP(),
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
+	}()
 
 	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "Registrasi berhasil"})
 }
@@ -87,18 +102,18 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	}
 
 	now := time.Now()
-    if user.UpdatedAt.Year() != now.Year() || user.UpdatedAt.Month() != now.Month() || user.UpdatedAt.Day() != now.Day() {
-        // Jika login terakhir adalah kemarin atau lebih lama, reset kuota ke 10
-        user.SummaryQuota = 10
-        update := bson.M{
-            "$set": bson.M{
-                "summary_quota": 10,
-                "updatedAt":     now,
-            },
-        }
-        atdb.UpdateOneDoc(config.Mongoconn, "users", bson.M{"_id": user.ID}, update)
-    }
-	
+	if user.UpdatedAt.Year() != now.Year() || user.UpdatedAt.Month() != now.Month() || user.UpdatedAt.Day() != now.Day() {
+		// Jika login terakhir adalah kemarin atau lebih lama, reset kuota ke 10
+		user.SummaryQuota = 10
+		update := bson.M{
+			"$set": bson.M{
+				"summary_quota": 10,
+				"updatedAt":     now,
+			},
+		}
+		atdb.UpdateOneDoc(config.Mongoconn, "users", bson.M{"_id": user.ID}, update)
+	}
+
 	// Buat token unik (UUID)
 	token := uuid.New().String()
 	expiresAt := time.Now().Add(24 * time.Hour)
@@ -125,6 +140,19 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 			LoginAt:   time.Now(),
 		}
 		atdb.InsertOneDoc(config.Mongoconn, "login_logs", loginLog)
+
+		// Activity Log
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			Activity:  "login",
+			Details:   "User login ke sistem",
+			IPAddress: ip,
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
 	}(c.IP(), string(c.Request().Header.UserAgent()))
 
 	response := model.LoginResponse{
@@ -158,10 +186,29 @@ func (h *UserHandler) LogoutHandler(c *fiber.Ctx) error {
 	}
 	token := authHeader[len(bearerPrefix):]
 
+	// Ambil info user sebelum hapus token
+	tokenData, _ := atdb.GetOneDoc[model.Token](config.Mongoconn, "tokens", bson.M{"token": token})
+	logUser, _ := atdb.GetOneDoc[model.PdfmUsers](config.Mongoconn, "users", bson.M{"email": tokenData.Email})
+
 	_, err := atdb.DeleteOneDoc(config.Mongoconn, "tokens", bson.M{"token": token})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal logout")
 	}
+
+	// Activity Log
+	go func() {
+		activityLog := model.ActivityLog{
+			ID:        primitive.NewObjectID(),
+			UserID:    logUser.ID,
+			Name:      logUser.Name,
+			Email:     logUser.Email,
+			Activity:  "logout",
+			Details:   "User logout dari sistem",
+			IPAddress: c.IP(),
+			CreatedAt: time.Now(),
+		}
+		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
+	}()
 
 	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "Logout berhasil"})
 }
@@ -274,13 +321,13 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 
 	// Mapping ke struct DB
 	newUser := model.PdfmUsers{
-		ID:        primitive.NewObjectID(),
-		Name:      req.Name,
-		Email:     req.Email,
-		Password:  req.Password,
+		ID:           primitive.NewObjectID(),
+		Name:         req.Name,
+		Email:        req.Email,
+		Password:     req.Password,
 		SummaryQuota: 10,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	count, err := atdb.GetCountDoc(config.Mongoconn, "users", bson.M{"email": newUser.Email})
