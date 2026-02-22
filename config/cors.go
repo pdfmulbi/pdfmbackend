@@ -12,17 +12,15 @@ var Origins = []string{
 	"https://www.bukupedia.co.id",
 	"https://naskah.bukupedia.co.id",
 	"https://bukupedia.co.id",
-	"https://pdfmulbi.github.io", // Domain GitHub Pages Anda
-	"http://127.0.0.1:5500",      // Live Server VS Code
+	"https://pdfmulbi.github.io", // Domain aplikasi Anda
+	"http://127.0.0.1:5500",      // Untuk pengetesan lokal
 	"http://localhost:5500",
 }
 
-// Fungsi untuk menormalisasi origin (menghapus trailing slash jika ada)
 func normalizeOrigin(origin string) string {
 	return strings.TrimRight(origin, "/")
 }
 
-// Fungsi untuk memeriksa apakah origin diizinkan
 func isAllowedOrigin(origin string) bool {
 	normalizedOrigin := normalizeOrigin(origin)
 	for _, o := range Origins {
@@ -33,17 +31,17 @@ func isAllowedOrigin(origin string) bool {
 	return false
 }
 
-// CorsMiddleware mengatur header CORS agar aplikasi frontend bisa mengakses backend
+// CorsMiddleware utama yang sudah diperbaiki
 func CorsMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		origin := c.Get("Origin")
 		normalizedOrigin := normalizeOrigin(origin)
 
-		// Log origin untuk memudahkan debugging di Cloud Logs
+		// Log untuk debugging di Cloud Console
 		log.Printf("Incoming request from Origin: %s", origin)
 
 		if isAllowedOrigin(normalizedOrigin) {
-			// PERBAIKAN: Gunakan 'origin' (dinamis), BUKAN "*" jika menggunakan Credentials
+			// PERBAIKAN: Gunakan 'origin' dinamis, BUKAN "*" jika memakai Credentials
 			c.Set("Access-Control-Allow-Origin", origin)
 			c.Set("Access-Control-Allow-Credentials", "true")
 			c.Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
@@ -55,11 +53,9 @@ func CorsMiddleware() fiber.Handler {
 				c.Set("Access-Control-Max-Age", "3600")
 				return c.SendStatus(fiber.StatusNoContent)
 			}
-
 			return c.Next()
 		}
 
-		// Jika origin tidak diizinkan, tetap lanjutkan tanpa header CORS tambahan
 		return c.Next()
 	}
 }
