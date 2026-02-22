@@ -58,8 +58,9 @@ func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal menyimpan data: " + err.Error())
 	}
 
-	// Log Activity
-	go func() {
+	// Log Activity - capture IP before goroutine since context is recycled after response
+	regIP := c.IP()
+	go func(ip string) {
 		activityLog := model.ActivityLog{
 			ID:        primitive.NewObjectID(),
 			UserID:    registrationData.ID,
@@ -67,11 +68,11 @@ func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 			Email:     registrationData.Email,
 			Activity:  "register",
 			Details:   "User mendaftar akun baru",
-			IPAddress: c.IP(),
+			IPAddress: ip,
 			CreatedAt: time.Now(),
 		}
 		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
-	}()
+	}(regIP)
 
 	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "Registrasi berhasil"})
 }
@@ -195,20 +196,21 @@ func (h *UserHandler) LogoutHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Gagal logout")
 	}
 
-	// Activity Log
-	go func() {
+	// Activity Log - capture IP before goroutine since context is recycled after response
+	ipAddr := c.IP()
+	go func(ip string, user model.PdfmUsers) {
 		activityLog := model.ActivityLog{
 			ID:        primitive.NewObjectID(),
-			UserID:    logUser.ID,
-			Name:      logUser.Name,
-			Email:     logUser.Email,
+			UserID:    user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
 			Activity:  "logout",
 			Details:   "User logout dari sistem",
-			IPAddress: c.IP(),
+			IPAddress: ip,
 			CreatedAt: time.Now(),
 		}
 		atdb.InsertOneDoc(config.Mongoconn, "activity_logs", activityLog)
-	}()
+	}(ipAddr, logUser)
 
 	return c.Status(fiber.StatusOK).JSON(model.ResponseMessage{Message: "Logout berhasil"})
 }
