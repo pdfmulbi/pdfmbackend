@@ -2,15 +2,21 @@ package route
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	"github.com/gocroot/config"
 	"github.com/gocroot/controller"
+	
 
 	_ "github.com/gocroot/docs"
 )
 
 func RegisterRoutes(app *fiber.App) {
-	app.Use(config.CorsMiddleware())
+	app.Use(cors.New(cors.Config{
+        AllowOrigins: "https://pdfmulbi.github.io, http://127.0.0.1:5500",
+        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+        AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+    }))
 
 	app.Use(func(c *fiber.Ctx) error {
 		config.SetEnv()
